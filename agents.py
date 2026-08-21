@@ -173,6 +173,28 @@ def extract_image_text(file_bytes: bytes) -> str:
         return f"[Lab notes image attached — OCR failed: {e}]"
 
 
+def extract_lab_notes_text(file_bytes: bytes, filename: str) -> str:
+    """Extract text from a lab notes upload, dispatching on file type.
+    Supports images (jpg/jpeg/png, via OCR), PDFs (native lab notes or an
+    exported ELN record), and plain-text/CSV exports from an ELN."""
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+
+    if ext == "pdf":
+        text = extract_pdf_text(file_bytes)
+        return text or "[Lab notes PDF attached — no extractable text found]"
+
+    if ext in ("jpg", "jpeg", "png"):
+        return extract_image_text(file_bytes)
+
+    if ext in ("txt", "csv"):
+        try:
+            return file_bytes.decode("utf-8", errors="ignore").strip()
+        except Exception as e:
+            return f"[Lab notes file attached — decode failed: {e}]"
+
+    raise AgentError(f"Unsupported lab notes file type: .{ext}")
+
+
 def build_agent1_input(client_text: str, pilot_report_text: str = "", lab_notes_text: str = "") -> str:
     """Combine the three Agent 1 input sources into one prompt payload."""
     sections = [f"Client brief: \"{client_text.strip()}\""] if client_text.strip() else []

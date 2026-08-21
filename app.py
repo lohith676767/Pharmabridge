@@ -10,7 +10,7 @@ import streamlit as st
 from agents import (
     OPEN_SOURCE_MODELS,
     AgentError,
-    extract_image_text,
+    extract_lab_notes_text,
     extract_pdf_text,
     run_pm_agent,
     run_sa_agent,
@@ -76,7 +76,10 @@ col1, col2, col3 = st.columns(3)
 with col1:
     pilot_report_file = st.file_uploader("1. Pilot report (.pdf)", type=["pdf"])
 with col2:
-    lab_notes_file = st.file_uploader("2. Lab notes (.jpg / .jpeg / .png)", type=["jpg", "jpeg", "png"])
+    lab_notes_file = st.file_uploader(
+        "2. Lab notes / ELN export (.pdf, .jpg, .jpeg, .png, .txt, .csv)",
+        type=["pdf", "jpg", "jpeg", "png", "txt", "csv"],
+    )
 with col3:
     st.markdown("3. Vague client text")
     client_text = st.text_area(
@@ -111,9 +114,12 @@ if run_clicked:
                 log(f"Pilot report extraction failed: {e}", "err")
 
     if lab_notes_file is not None:
-        with st.spinner("Running OCR on lab notes image..."):
-            lab_notes_text = extract_image_text(lab_notes_file.read())
-            log("Lab notes image processed", "ok")
+        with st.spinner("Extracting lab notes / ELN export..."):
+            try:
+                lab_notes_text = extract_lab_notes_text(lab_notes_file.read(), lab_notes_file.name)
+                log(f"Lab notes file processed — {lab_notes_file.name}", "ok")
+            except AgentError as e:
+                log(f"Lab notes extraction failed: {e}", "err")
 
     a1_config = AgentConfig(api_key=a1_key, model=a1_model, base_url=a1_base_url)
     a2_config = AgentConfig(api_key=a2_key, model=a2_model, base_url=a2_base_url)
