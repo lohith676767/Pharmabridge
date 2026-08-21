@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PharmaBridge AI — Tech Transfer System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<style>
+  [v-cloak]{display:none}
+  *{box-sizing:border-box}
+  body{margin:0}
+  ::-webkit-scrollbar{width:4px;height:4px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
+  .fade-enter-active,.fade-leave-active{transition:opacity .2s}
+  .fade-enter-from,.fade-leave-to{opacity:0}
+  .bar-fill{transition:width .8s cubic-bezier(.4,0,.2,1)}
+</style>
+<script>tailwind.config={darkMode:'class',theme:{extend:{}}}</script>
+</head>
+<body class="bg-slate-950 text-slate-200 font-sans antialiased">
+<div id="app" v-cloak class="flex h-screen overflow-hidden">
+
+  <!-- ═══════════════════════════════════════════
+       SIDEBAR
+  ═══════════════════════════════════════════ -->
+  <aside class="w-60 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0">
+    <!-- Logo -->
+    <div class="p-5 border-b border-slate-800">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white text-sm">Pb</div>
+        <div>
+          <div class="font-semibold text-white text-sm leading-tight">PharmaBridge AI</div>
+          <div class="text-xs text-slate-500">Tech Transfer OS</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Nav links -->
+    <nav class="flex-1 p-3 space-y-0.5 overflow-y-auto">
+      <div v-for="item in navItems" :key="item.id"
+        @click="activeView = item.id"
+        :class="['flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer select-none transition-all text-sm',
+          activeView === item.id
+            ? 'bg-blue-600/20 text-blue-300 border border-blue-600/30'
+            : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent']">
+        <span class="text-base w-5 text-center">{{ item.icon }}</span>
+        <span class="font-medium flex-1">{{ item.label }}</span>
+        <span v-if="item.badge" class="text-xs bg-blue-600 text-white rounded-full px-1.5 py-0.5 leading-none">{{ item.badge }}</span>
+      </div>
+    </nav>
+
+    <!-- Status footer -->
+    <div class="p-4 border-t border-slate-800 space-y-2">
+      <div class="flex items-center gap-2">
+        <div class="w-2 h-2 rounded-full bg-green-500 shrink-0"></div>
+        <span class="text-xs text-slate-400">System operational</span>
+      </div>
+      <div class="text-xs text-slate-600">Rockathon'26 — PS2 · SSNCE</div>
+    </div>
+  </aside>
+
+  <!-- ═══════════════════════════════════════════
+       MAIN
+  ═══════════════════════════════════════════ -->
+  <div class="flex-1 flex flex-col overflow-hidden">
+
+    <!-- Top header -->
+    <header class="shrink-0 bg-slate-950/90 backdrop-blur border-b border-slate-800 px-8 py-4 flex items-center justify-between">
+      <div>
+        <h1 class="text-base font-semibold text-white">{{ currentNav.label }}</h1>
+        <p class="text-xs text-slate-500">{{ currentNav.description }}</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <div :class="['text-xs px-3 py-1.5 rounded-full font-medium border transition-colors',
+          complianceScore >= 80 ? 'bg-green-500/10 text-green-400 border-green-500/20'
+          : complianceScore >= 60 ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+          : 'bg-red-500/10 text-red-400 border-red-500/20']">
+          Compliance {{ complianceScore }}%
+        </div>
+        <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white select-none">LS</div>
+      </div>
+    </header>
+
+    <!-- Page content -->
+    <main class="flex-1 overflow-y-auto p-8">
+
+      <!-- ─────────────────────────────────
+           DASHBOARD
+      ───────────────────────────────── -->
+      <div v-if="activeView === 'dashboard'">
+
+        <!-- KPI cards -->
+        <div class="grid grid-cols-4 gap-4 mb-8">
+          <div v-for="card in kpiCards" :key="card.label"
+            class="bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition-colors">
+            <div class="text-xl mb-2">{{ card.icon }}</div>
+            <div class="text-2xl font-bold text-white mb-0.5">{{ card.value }}</div>
+            <div class="text-xs text-slate-500">{{ card.label }}</div>
+            <div class="text-xs mt-2" :class="card.positive ? 'text-green-400' : 'text-slate-500'">{{ card.sub }}</div>
+          </div>
+        </div>
+
+        <!-- Two-col -->
+        <div class="grid grid-cols-5 gap-6">
+
+          <!-- Compliance overview -->
+          <div class="col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-6">
+            <div class="font-semibold text-white text-sm mb-5">Compliance overview</div>
+            <div v-for="cat in complianceCategories" :key="cat.name" class="mb-4 last:mb-0">
+              <div class="flex justify-between text-xs mb-1.5">
+                <span class="text-slate-300">{{ cat.name }}</span>
+                <span :class="cat.score >= 80 ? 'text-green-400' : cat.score >= 60 ? 'text-yellow-400' : 'text-red-400'">{{ cat.score }}%</span>
+              </div>
+              <div class="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                <div class="bar-fill h-full rounded-full"
+                  :style="{ width: cat.score + '%' }"
+                  :class="cat.score >= 80 ? 'bg-green-500' : cat.score >= 60 ? 'bg-yellow-500' : 'bg-red-500'"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Activity feed -->
+          <div class="col-span-3 bg-slate-900 border border-slate-800 rounded-xl p-6">
+            <div class="font-semibold text-white text-sm mb-5">Recent activity</div>
+            <div v-for="entry in activityFeed" :key="entry.id" class="flex gap-3 mb-4 last:mb-0">
+              <div class="shrink-0 mt-1.5">
+                <div :class="['w-2 h-2 rounded-full',
+                  entry.type==='success' ? 'bg-green-500'
+                  : entry.type==='warning' ? 'bg-yellow-500'
+                  : entry.type==='error' ? 'bg-red-500'
+                  : 'bg-blue-500']"></div>
+              </div>
+              <div>
+                <div class="text-sm text-slate-200 leading-snug">{{ entry.message }}</div>
+                <div class="text-xs text-slate-500 mt-0.5">{{ entry.time }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scorecard summary -->
+        <div class="mt-6 bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <div class="font-semibold text-white text-sm mb-4">Automated compliance scorecard</div>
+          <div class="grid grid-cols-4 gap-4">
+            <div v-for="s in scorecardItems" :key="s.label"
+              :class="['rounded-lg p-4 border',
+                s.status==='pass' ? 'bg-green-500/5 border-green-500/20'
+                : s.status==='warn' ? 'bg-yellow-500/5 border-yellow-500/20'
+                : 'bg-red-500/5 border-red-500/20']">
+              <div class="text-xl mb-2">{{ s.icon }}</div>
+              <div class="text-sm font-medium text-white mb-1">{{ s.label }}</div>
+              <div class="text-xs mb-3" :class="s.status==='pass'?'text-slate-400':s.status==='warn'?'text-slate-400':'text-slate-400'">{{ s.detail }}</div>
+              <span :class="['text-xs px-2 py-0.5 rounded-full font-medium',
+                s.status==='pass' ? 'bg-green-500/15 text-green-400'
+                : s.status==='warn' ? 'bg-yellow-500/15 text-yellow-400'
+                : 'bg-red-500/15 text-red-400']">
+                {{ s.status==='pass' ? '✓ Pass' : s.status==='warn' ? '⚠ Review' : '✗ Fail' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────
+           DATA PIPELINE
+      ───────────────────────────────── -->
+      <div v-if="activeView === 'pipeline'">
+
+        <!-- Upload zone -->
+        <div v-if="!uploadDone && !isParsing"
+          @dragover.prevent="isDragging = true"
+          @dragleave.prevent="isDragging = false"
+          @drop.prevent="handleDrop"
+          @click="startParse"
+          :class="['border-2 border-dashed rounded-2xl p-20 text-center cursor-pointer transition-all mb-8 select-none',
+            isDragging ? 'border-blue-500 bg-blue-500/5 scale-[1.01]' : 'border-slate-700 hover:border-slate-500 hover:bg-slate-900/50']">
+          <div class="text-5xl mb-4">📄</div>
+          <div class="text-lg font-semibold text-slate-200 mb-2">Drop R&D Lab Notebook PDF here</div>
+          <div class="text-sm text-slate-500 mb-6">or click anywhere to simulate upload</div>
+          <div class="inline-flex items-center gap-2 text-xs text-slate-600 bg-slate-900 border border-slate-800 rounded-full px-4 py-2">
+            <span>Supported format: .pdf</span><span>·</span><span>Max 50 MB</span>
+          </div>
+        </div>
+
+        <!-- Parse progress -->
+        <div v-if="isParsing" class="bg-slate-900 border border-slate-800 rounded-2xl p-16 text-center mb-8">
+          <div class="text-5xl mb-5">⚡</div>
+          <div class="text-lg font-semibold text-white mb-1">PM Agent parsing document...</div>
+          <div class="text-sm text-slate-400 mb-8">Extracting critical process parameters with confidence scoring</div>
+          <div class="max-w-md mx-auto">
+            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden mb-2">
+              <div class="bar-fill h-full bg-blue-500 rounded-full" :style="{width: parseProgress+'%', transition:'width 0.15s linear'}"></div>
+            </div>
+            <div class="flex justify-between text-xs text-slate-500">
+              <span>{{ parseStage }}</span>
+              <span>{{ parseProgress }}%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Extracted parameters table -->
+        <div v-if="uploadDone">
+          <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div>
+              <div class="font-semibold text-white">Extracted parameters</div>
+              <div class="text-xs text-slate-500 mt-0.5">Source: R&D_Lab_Notebook_TabletCoating_v3.pdf · Parsed {{ new Date().toLocaleDateString() }}</div>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-xs px-2.5 py-1 rounded-full bg-green-500/10 text-green-400 border border-green-500/20">{{ parsedParams.filter(p=>p.confidence==='High').length }} high confidence</span>
+              <span class="text-xs px-2.5 py-1 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">{{ parsedParams.filter(p=>p.confidence==='Medium').length }} medium</span>
+              <span class="text-xs px-2.5 py-1 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">{{ parsedParams.filter(p=>p.status==='Missing').length }} missing</span>
+              <button @click="resetUpload" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700 transition-colors">↺ Reset</button>
+            </div>
+          </div>
+
+          <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-slate-800">
+                  <th class="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Parameter</th>
+                  <th class="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Value</th>
+                  <th class="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Validated range</th>
+                  <th class="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Criticality</th>
+                  <th class="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Confidence</th>
+                  <th class="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Evidence</th>
+                  <th class="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="p in parsedParams" :key="p.name"
+                  class="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
+                  <td class="px-5 py-3.5 font-medium text-slate-200">{{ p.name }}</td>
+                  <td class="px-5 py-3.5 font-mono text-xs text-slate-300">{{ p.value || '—' }}</td>
+                  <td class="px-5 py-3.5 font-mono text-xs text-slate-400">{{ p.range || '—' }}</td>
+                  <td class="px-5 py-3.5">
+                    <span :class="['text-xs px-2 py-0.5 rounded-full font-medium',
+                      p.criticality==='High'?'bg-red-500/15 text-red-400'
+                      :p.criticality==='Medium'?'bg-yellow-500/15 text-yellow-400'
+                      :'bg-green-500/15 text-green-400']">{{ p.criticality }}</span>
+                  </td>
+                  <td class="px-5 py-3.5">
+                    <span :class="['text-xs px-2 py-0.5 rounded-full font-medium',
+                      p.confidence==='High'?'bg-green-500/15 text-green-400'
+                      :p.confidence==='Medium'?'bg-yellow-500/15 text-yellow-400'
+                      :'bg-slate-700 text-slate-400']">{{ p.confidence }}</span>
+                  </td>
+                  <td class="px-5 py-3.5 text-xs text-slate-500">{{ p.evidence }}</td>
+                  <td class="px-5 py-3.5">
+                    <span :class="['text-xs px-2 py-0.5 rounded-full font-medium',
+                      p.status==='Verified'?'bg-green-500/15 text-green-400'
+                      :p.status==='Flagged'?'bg-yellow-500/15 text-yellow-400'
+                      :'bg-red-500/15 text-red-400']">{{ p.status }}</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- PM Agent summary box -->
+          <div class="mt-4 bg-blue-600/5 border border-blue-600/20 rounded-xl p-4 flex items-start gap-4">
+            <div class="text-blue-400 text-xl shrink-0">⬡</div>
+            <div>
+              <div class="text-sm font-medium text-blue-300 mb-1">PM Agent summary</div>
+              <div class="text-xs text-slate-400 leading-relaxed">
+                Confidence: <span class="text-green-400 font-medium">Partial</span> —
+                7 of 8 parameters fully validated. Exhaust air humidity not documented in source notebook.
+                Open question raised: <em>"What is the target exhaust air humidity range for the coating step?"</em>
+                Handoff package ready for validation layer.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────
+           EQUIPMENT MATCHING
+      ───────────────────────────────── -->
+      <div v-if="activeView === 'equipment'">
+
+        <!-- R&D vs Plant comparison -->
+        <div class="mb-8">
+          <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div class="font-semibold text-white">R&D scale vs plant constraints</div>
+            <div class="flex items-center gap-4 text-xs text-slate-400">
+              <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-sm bg-green-500/20 border border-green-500/40"></span>Compatible</span>
+              <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-sm bg-yellow-500/20 border border-yellow-500/40"></span>Review needed</span>
+              <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-sm bg-red-500/20 border border-red-500/40"></span>Incompatible</span>
+            </div>
+          </div>
+
+          <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-slate-800">
+                  <th class="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Parameter</th>
+                  <th class="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">R&D scale</th>
+                  <th class="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Plant constraint</th>
+                  <th class="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Gap</th>
+                  <th class="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                  <th class="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in comparisonData" :key="row.parameter"
+                  :class="['border-b border-slate-800/50 transition-colors',
+                    row.status==='ok'?'hover:bg-green-500/5'
+                    :row.status==='warn'?'hover:bg-yellow-500/5'
+                    :'hover:bg-red-500/5']">
+                  <td class="px-5 py-3.5 font-medium text-slate-200">{{ row.parameter }}</td>
+                  <td class="px-5 py-3.5 font-mono text-xs text-slate-300">{{ row.rdValue }}</td>
+                  <td class="px-5 py-3.5 font-mono text-xs text-slate-300">{{ row.plantConstraint }}</td>
+                  <td class="px-5 py-3.5 font-mono text-xs" :class="row.gap==='None'?'text-green-400':row.gap==='Unknown'?'text-slate-500':'text-red-400'">{{ row.gap }}</td>
+                  <td class="px-5 py-3.5">
+                    <span :class="['text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap',
+                      row.status==='ok'?'bg-green-500/15 text-green-400'
+                      :row.status==='warn'?'bg-yellow-500/15 text-yellow-400'
+                      :'bg-red-500/15 text-red-400']">
+                      {{ row.status==='ok'?'✓ Compatible':row.status==='warn'?'⚠ Near limit':'✗ Incompatible' }}
+                    </span>
+                  </td>
+                  <td class="px-5 py-3.5 text-xs text-slate-400 max-w-xs">{{ row.action }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Equipment cards -->
+        <div>
+          <div class="font-semibold text-white mb-4">Matched plant equipment</div>
+          <div class="grid grid-cols-3 gap-4">
+            <div v-for="eq in equipmentList" :key="eq.id"
+              :class="['bg-slate-900 border rounded-xl p-5 transition-all hover:shadow-lg',
+                eq.match==='full'?'border-green-500/30 hover:border-green-500/50'
+                :eq.match==='partial'?'border-yellow-500/30 hover:border-yellow-500/50'
+                :'border-red-500/20 hover:border-red-500/30']">
+              <div class="flex items-start justify-between gap-2 mb-4">
+                <div>
+                  <div class="font-semibold text-sm text-white">{{ eq.name }}</div>
+                  <div class="text-xs text-slate-500 mt-0.5 font-mono">{{ eq.id }}</div>
+                </div>
+                <span :class="['text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap',
+                  eq.match==='full'?'bg-green-500/15 text-green-400'
+                  :eq.match==='partial'?'bg-yellow-500/15 text-yellow-400'
+                  :'bg-red-500/15 text-red-400']">
+                  {{ eq.match==='full'?'Full match':eq.match==='partial'?'Partial':'No match' }}
+                </span>
+              </div>
+              <div class="space-y-2 mb-4">
+                <div v-for="spec in eq.specs" :key="spec.label" class="flex justify-between text-xs">
+                  <span class="text-slate-500">{{ spec.label }}</span>
+                  <span class="text-slate-300 font-mono">{{ spec.value }}</span>
+                </div>
+              </div>
+              <div class="pt-3 border-t border-slate-800 text-xs leading-relaxed"
+                :class="eq.match==='full'?'text-green-400':eq.match==='partial'?'text-yellow-400':'text-red-400'">
+                {{ eq.note }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────
+           AUDIT LOGS
+      ───────────────────────────────── -->
+      <div v-if="activeView === 'audit'">
+
+        <!-- Filters + stats -->
+        <div class="flex items-center gap-3 mb-6 flex-wrap">
+          <select v-model="auditFilter"
+            class="text-sm bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-300 focus:outline-none focus:border-blue-500 cursor-pointer">
+            <option value="">All statuses</option>
+            <option>PASS</option><option>BLOCK</option><option>WARN</option><option>INFO</option>
+          </select>
+          <select v-model="auditAgent"
+            class="text-sm bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-300 focus:outline-none focus:border-blue-500 cursor-pointer">
+            <option value="">All agents</option>
+            <option>PM Agent</option><option>SA Agent</option><option>Validation Layer</option><option>System</option>
+          </select>
+          <div class="ml-auto flex items-center gap-4 text-xs text-slate-500">
+            <span>{{ filteredLogs.length }} of {{ auditLogs.length }} entries</span>
+            <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>{{ auditLogs.filter(l=>l.status==='PASS').length }} passed</span>
+            <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-yellow-500"></span>{{ auditLogs.filter(l=>l.status==='WARN').length }} warnings</span>
+            <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>{{ auditLogs.filter(l=>l.status==='BLOCK').length }} blocked</span>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-slate-800">
+                <th class="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Timestamp</th>
+                <th class="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Agent</th>
+                <th class="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Event</th>
+                <th class="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Detail</th>
+                <th class="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="filteredLogs.length === 0">
+                <td colspan="5" class="px-5 py-10 text-center text-slate-500 text-sm">No entries match the current filter</td>
+              </tr>
+              <tr v-for="entry in filteredLogs" :key="entry.id"
+                class="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
+                <td class="px-5 py-3.5 font-mono text-xs text-slate-400 whitespace-nowrap">{{ entry.timestamp }}</td>
+                <td class="px-5 py-3.5 whitespace-nowrap">
+                  <span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-medium">{{ entry.agent }}</span>
+                </td>
+                <td class="px-5 py-3.5 text-sm text-slate-200">{{ entry.event }}</td>
+                <td class="px-5 py-3.5 text-xs text-slate-500 max-w-xs truncate" :title="entry.detail">{{ entry.detail }}</td>
+                <td class="px-5 py-3.5 whitespace-nowrap">
+                  <span :class="['text-xs px-2.5 py-1 rounded-full font-medium',
+                    entry.status==='PASS'?'bg-green-500/15 text-green-400'
+                    :entry.status==='BLOCK'?'bg-red-500/15 text-red-400'
+                    :entry.status==='WARN'?'bg-yellow-500/15 text-yellow-400'
+                    :'bg-blue-500/15 text-blue-400']">{{ entry.status }}</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Traceability note -->
+        <div class="mt-4 bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-start gap-3">
+          <span class="text-blue-400 text-lg shrink-0">🔗</span>
+          <div class="text-xs text-slate-400 leading-relaxed">
+            <span class="text-slate-300 font-medium">Full traceability preserved.</span>
+            Every event in this log is immutable and timestamped. Agent 2 (SA Agent) receives only the PM Agent's JSON output — it never sees the original client brief, ensuring structural dependency and preventing context drift. This log constitutes the transfer audit trail per 21 CFR Part 11 requirements.
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+const { createApp } = Vue;
+
+createApp({
+  data() {
+    return {
+      activeView: 'dashboard',
+      isDragging: false,
+      uploadDone: false,
+      isParsing: false,
+      parseProgress: 0,
+      parseStage: 'Initialising extraction...',
+      auditFilter: '',
+      auditAgent: '',
+
+      navItems: [
+        { id:'dashboard',  icon:'◈', label:'Dashboard',          description:'Transfer health overview',                badge: null },
+        { id:'pipeline',   icon:'⬡', label:'Data Pipeline',      description:'Upload and parse R&D lab notebooks',       badge: null },
+        { id:'equipment',  icon:'⚙', label:'Equipment Matching', description:'R&D vs plant scale parameter comparison',  badge: null },
+        { id:'audit',      icon:'📋', label:'Audit Logs',         description:'Full traceability and event record',       badge: '12' },
+      ],
+
+      kpiCards: [
+        { icon:'🔬', value:'8',    label:'Parameters extracted',  sub:'↑ vs 6 in v2', positive:true  },
+        { icon:'✅', value:'82%',  label:'Compliance score',       sub:'↑ 6% from v2', positive:true  },
+        { icon:'⚙',  value:'3/5',  label:'Equipment matched',      sub:'2 require review', positive:false },
+        { icon:'📋', value:'12',   label:'Audit entries',          sub:'Full trace preserved', positive:false },
+      ],
+
+      complianceCategories: [
+        { name:'Parameter completeness',         score:87 },
+        { name:'Scale sensitivity documentation', score:75 },
+        { name:'Validated range coverage',       score:90 },
+        { name:'Equipment compatibility',        score:80 },
+        { name:'Evidence source traceability',   score:83 },
+        { name:'Critical quality attributes',    score:70 },
+      ],
+
+      activityFeed: [
+        { id:1, type:'success', message:'PM Agent extracted 8 parameters — 6 high confidence, 2 medium', time:'2 min ago' },
+        { id:2, type:'success', message:'Handoff validation passed — all critical fields present', time:'2 min ago' },
+        { id:3, type:'warning', message:'Inlet air humidity not documented — open question raised', time:'3 min ago' },
+        { id:4, type:'info',    message:'SA Agent generated 6 manufacturing design controls', time:'3 min ago' },
+        { id:5, type:'error',   message:'Pan speed ceiling on PC-01 incompatible with R&D spec (150 RPM > 120 RPM)', time:'5 min ago' },
+        { id:6, type:'info',    message:'R&D_Lab_Notebook_TabletCoating_v3.pdf uploaded and parsed', time:'6 min ago' },
+      ],
+
+      scorecardItems: [
+        { icon:'📐', label:'Parameter extraction',    detail:'8/8 extracted, 1 missing field',         status:'warn' },
+        { icon:'🔗', label:'Handoff integrity',        detail:'All critical fields present — passed',   status:'pass' },
+        { icon:'⚙',  label:'Equipment compatibility', detail:'3/5 matched, 1 incompatible range',      status:'warn' },
+        { icon:'📋', label:'Traceability chain',       detail:'12/12 events logged with timestamps',   status:'pass' },
+      ],
+
+      parsedParams: [
+        { name:'Coating temperature',      value:'52°C',    range:'51–53°C',     criticality:'High',   confidence:'High',   evidence:'Pilot batch validation',  status:'Verified' },
+        { name:'Inlet air temperature',    value:'60°C',    range:'58–62°C',     criticality:'High',   confidence:'High',   evidence:'R&D protocol v3',         status:'Verified' },
+        { name:'Pan speed (mixing)',        value:'150 RPM', range:'140–160 RPM', criticality:'Medium', confidence:'High',   evidence:'R&D lab notes',           status:'Flagged'  },
+        { name:'Spray rate',               value:'12 g/min',range:'10–14 g/min', criticality:'High',   confidence:'High',   evidence:'Pilot batch validation',  status:'Verified' },
+        { name:'Atomization pressure',     value:'2.0 bar', range:'1.8–2.2 bar', criticality:'Medium', confidence:'Medium', evidence:'R&D lab notes',           status:'Verified' },
+        { name:'Batch size',               value:'5 kg',    range:'4–6 kg',      criticality:'High',   confidence:'High',   evidence:'Pilot batch validation',  status:'Flagged'  },
+        { name:'Coating solution viscosity',value:'850 cP', range:'800–900 cP',  criticality:'Medium', confidence:'Medium', evidence:'R&D protocol v3',         status:'Verified' },
+        { name:'Exhaust air humidity',     value:null,      range:null,          criticality:'Low',    confidence:'Low',    evidence:'Not stated in notebook',  status:'Missing'  },
+      ],
+
+      comparisonData: [
+        { parameter:'Coating temperature',        rdValue:'52°C (51–53°C)',         plantConstraint:'45–65°C operational',   gap:'None',       status:'ok',   action:'No action required' },
+        { parameter:'Inlet air temperature',      rdValue:'60°C (58–62°C)',         plantConstraint:'50–70°C operational',   gap:'None',       status:'ok',   action:'No action required' },
+        { parameter:'Pan speed (mixing)',          rdValue:'150 RPM (140–160)',      plantConstraint:'5–120 RPM (PC-01)',     gap:'+30 RPM',    status:'error',action:'Revalidate at 120 RPM or use PC-02 (10–200 RPM)' },
+        { parameter:'Spray rate',                 rdValue:'12 g/min (10–14)',       plantConstraint:'5–50 g/min',           gap:'None',       status:'ok',   action:'No action required' },
+        { parameter:'Atomization pressure',       rdValue:'2.0 bar (1.8–2.2)',      plantConstraint:'1.5–3.0 bar',          gap:'None',       status:'ok',   action:'No action required' },
+        { parameter:'Batch size',                 rdValue:'5 kg (pilot)',           plantConstraint:'50–200 kg commercial', gap:'10–40× scale-up',status:'warn',action:'Scale-up study required before commercial transfer' },
+        { parameter:'Coating solution viscosity', rdValue:'850 cP (800–900)',       plantConstraint:'500–1200 cP',          gap:'None',       status:'ok',   action:'No action required' },
+        { parameter:'Exhaust air humidity',       rdValue:'Not documented',         plantConstraint:'≤ 30% RH required',   gap:'Unknown',    status:'error',action:'Measure and validate in R&D before any transfer' },
+      ],
+
+      equipmentList: [
+        {
+          id:'PC-01', name:'Pan Coater — Line 3', match:'partial',
+          specs:[
+            { label:'Pan speed',     value:'5–120 RPM'   },
+            { label:'Temp range',    value:'20–70°C'     },
+            { label:'Batch cap.',    value:'50–150 kg'   },
+            { label:'Spray rate',    value:'5–80 g/min'  },
+          ],
+          note:'⚠ Pan speed ceiling (120 RPM) is below R&D spec (150 RPM). Revalidation required.'
+        },
+        {
+          id:'PC-02', name:'Pan Coater — Line 7', match:'full',
+          specs:[
+            { label:'Pan speed',     value:'10–200 RPM'  },
+            { label:'Temp range',    value:'25–80°C'     },
+            { label:'Batch cap.',    value:'30–200 kg'   },
+            { label:'Spray rate',    value:'2–100 g/min' },
+          ],
+          note:'✓ All R&D parameters within operational range. Recommended primary unit.'
+        },
+        {
+          id:'BL-04', name:'High-Shear Blender', match:'none',
+          specs:[
+            { label:'Impeller speed',value:'100–3000 RPM'},
+            { label:'Temp control',  value:'None'        },
+            { label:'Batch cap.',    value:'10–80 kg'    },
+            { label:'Application',   value:'Wet granulation'},
+          ],
+          note:'✗ Unit class mismatch — not applicable for tablet coating process.'
+        },
+        {
+          id:'DR-01', name:'Fluid Bed Dryer', match:'partial',
+          specs:[
+            { label:'Inlet air temp',value:'40–90°C'     },
+            { label:'Airflow',       value:'200–1200 m³/h'},
+            { label:'Batch cap.',    value:'20–120 kg'   },
+            { label:'Humidity ctrl', value:'Yes (±2% RH)'},
+          ],
+          note:'⚠ Can supplement coating for humidity control. Not a primary coater.'
+        },
+        {
+          id:'QC-01', name:'In-line NIR Analyser', match:'full',
+          specs:[
+            { label:'Measurement',   value:'Coating thickness'},
+            { label:'Response time', value:'< 2 sec'    },
+            { label:'Compat.',       value:'PC-01, PC-02'},
+            { label:'Output',        value:'Real-time API'},
+          ],
+          note:'✓ Recommended for real-time coating uniformity monitoring (CQA).'
+        },
+      ],
+
+      auditLogs: [
+        { id:1,  timestamp:'2026-08-21 14:23:01', agent:'System',           event:'Session initiated',              detail:'User: lohith.s@ssnce.edu — PharmaBridge v1.0',                  status:'INFO'  },
+        { id:2,  timestamp:'2026-08-21 14:23:15', agent:'System',           event:'Document uploaded',              detail:'R&D_Lab_Notebook_TabletCoating_v3.pdf — 2.4 MB',                status:'INFO'  },
+        { id:3,  timestamp:'2026-08-21 14:23:22', agent:'PM Agent',         event:'Parameter extraction started',   detail:'Parsing 38 pages — NLP extraction mode active',                 status:'INFO'  },
+        { id:4,  timestamp:'2026-08-21 14:23:45', agent:'PM Agent',         event:'Extraction complete',            detail:'8 parameters extracted — 6 High, 2 Medium confidence',          status:'PASS'  },
+        { id:5,  timestamp:'2026-08-21 14:23:45', agent:'PM Agent',         event:'Open question raised',           detail:'Exhaust air humidity not documented — flagged for clarification',status:'WARN'  },
+        { id:6,  timestamp:'2026-08-21 14:23:46', agent:'Validation Layer', event:'Handoff check initiated',        detail:'Checking 8 parameters × 3 fields (criticality, range, scale)',  status:'INFO'  },
+        { id:7,  timestamp:'2026-08-21 14:23:47', agent:'Validation Layer', event:'Handoff validation PASSED',      detail:'7/8 parameters fully validated — 1 flagged (batch size)',        status:'PASS'  },
+        { id:8,  timestamp:'2026-08-21 14:23:48', agent:'SA Agent',         event:'Manufacturing design initiated', detail:'Input: PM Agent JSON only — original brief excluded from context',status:'INFO'  },
+        { id:9,  timestamp:'2026-08-21 14:24:10', agent:'SA Agent',         event:'Design controls generated',      detail:'6 control specs — 5 Verified, 1 Unverified (batch size)',        status:'PASS'  },
+        { id:10, timestamp:'2026-08-21 14:24:11', agent:'SA Agent',         event:'Risk flag raised',               detail:'Pan speed ceiling on PC-01 incompatible — recommended PC-02',    status:'WARN'  },
+        { id:11, timestamp:'2026-08-21 14:24:12', agent:'SA Agent',         event:'Risk flag raised',               detail:'Batch scale-up (5 kg → 50–200 kg) requires formal study',        status:'WARN'  },
+        { id:12, timestamp:'2026-08-21 14:24:13', agent:'System',           event:'Pipeline complete',              detail:'Compliance score: 82% — 2 actions outstanding',                  status:'PASS'  },
+      ],
+    };
+  },
+
+  computed: {
+    currentNav() {
+      return this.navItems.find(n => n.id === this.activeView) || this.navItems[0];
+    },
+    complianceScore() {
+      const scores = this.complianceCategories.map(c => c.score);
+      return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+    },
+    filteredLogs() {
+      return this.auditLogs.filter(l =>
+        (this.auditFilter === '' || l.status === this.auditFilter) &&
+        (this.auditAgent  === '' || l.agent  === this.auditAgent)
+      );
+    },
+  },
+
+  methods: {
+    handleDrop(e) {
+      this.isDragging = false;
+      this.startParse();
+    },
+    startParse() {
+      if (this.uploadDone || this.isParsing) return;
+      this.isParsing = true;
+      this.parseProgress = 0;
+      const stages = [
+        'Initialising extraction...',
+        'Reading document structure...',
+        'Identifying process parameters...',
+        'Scoring confidence levels...',
+        'Validating evidence sources...',
+        'Building handoff package...',
+      ];
+      let stageIdx = 0;
+      const tick = setInterval(() => {
+        const jump = Math.floor(Math.random() * 10) + 5;
+        this.parseProgress = Math.min(this.parseProgress + jump, 100);
+        stageIdx = Math.floor((this.parseProgress / 100) * stages.length);
+        this.parseStage = stages[Math.min(stageIdx, stages.length - 1)];
+        if (this.parseProgress >= 100) {
+          clearInterval(tick);
+          setTimeout(() => {
+            this.isParsing = false;
+            this.uploadDone = true;
+          }, 400);
+        }
+      }, 110);
+    },
+    resetUpload() {
+      this.uploadDone = false;
+      this.isParsing = false;
+      this.parseProgress = 0;
+    },
+  },
+}).mount('#app');
+</script>
+</body>
+</html>

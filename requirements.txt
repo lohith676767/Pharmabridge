@@ -1,0 +1,6 @@
+streamlit>=1.36
+requests>=2.31
+pydantic>=2.6
+pypdf>=4.0
+pillow>=10.0
+pytesseract>=0.3.10
