@@ -21,6 +21,7 @@ from agents import (  # noqa: E402
     AgentError,
     extract_lab_notes_text,
     extract_pdf_text,
+    fetch_available_models,
     run_pm_agent,
     run_sa_agent,
 )
@@ -51,8 +52,14 @@ def on_startup():
 # ──────────────────────────────────────────────
 
 @app.get("/api/models")
-def get_models():
-    return {"models": OPEN_SOURCE_MODELS}
+def get_models(base_url: str = "https://openrouter.ai/api/v1/chat/completions", api_key: str = ""):
+    """Live model catalog for the given endpoint. Falls back to the static
+    OPEN_SOURCE_MODELS list if the endpoint can't be reached (e.g. no key
+    entered yet, or an offline/custom endpoint)."""
+    try:
+        return {"models": fetch_available_models(base_url, api_key), "live": True}
+    except AgentError:
+        return {"models": OPEN_SOURCE_MODELS, "live": False}
 
 
 @app.post("/api/pipeline/run")

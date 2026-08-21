@@ -123,24 +123,28 @@
           <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
             <div class="font-semibold text-white text-sm mb-3">🧠 Agent 1 — Product Manager</div>
             <label class="text-xs text-slate-500">API key</label>
-            <input v-model="a1.key" type="password" placeholder="sk-..." class="w-full mb-3 mt-1 text-sm bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500" />
-            <label class="text-xs text-slate-500">Model (open source)</label>
-            <select v-model="a1.model" class="w-full mb-3 mt-1 text-sm bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500">
-              <option v-for="m in models" :key="m" :value="m">{{ m }}</option>
-            </select>
+            <input v-model="a1.key" @blur="refreshModels('a1')" type="password" placeholder="sk-..." class="w-full mb-3 mt-1 text-sm bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500" />
+            <label class="text-xs text-slate-500">Model <span v-if="a1.live" class="text-green-400">(live catalog)</span><span v-else class="text-yellow-400">(fallback list — check endpoint/key)</span></label>
+            <input v-model="a1.model" list="a1-models" placeholder="type or pick a model id"
+              class="w-full mb-3 mt-1 text-sm bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500" />
+            <datalist id="a1-models">
+              <option v-for="m in a1.models" :key="m" :value="m"></option>
+            </datalist>
             <label class="text-xs text-slate-500">Endpoint (OpenAI-compatible)</label>
-            <input v-model="a1.base_url" class="w-full mt-1 text-sm bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500" />
+            <input v-model="a1.base_url" @blur="refreshModels('a1')" class="w-full mt-1 text-sm bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500" />
           </div>
           <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
             <div class="font-semibold text-white text-sm mb-3">⚙ Agent 2 — Solution Architect</div>
             <label class="text-xs text-slate-500">API key</label>
-            <input v-model="a2.key" type="password" placeholder="sk-..." class="w-full mb-3 mt-1 text-sm bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500" />
-            <label class="text-xs text-slate-500">Model (open source)</label>
-            <select v-model="a2.model" class="w-full mb-3 mt-1 text-sm bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500">
-              <option v-for="m in models" :key="m" :value="m">{{ m }}</option>
-            </select>
+            <input v-model="a2.key" @blur="refreshModels('a2')" type="password" placeholder="sk-..." class="w-full mb-3 mt-1 text-sm bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500" />
+            <label class="text-xs text-slate-500">Model <span v-if="a2.live" class="text-green-400">(live catalog)</span><span v-else class="text-yellow-400">(fallback list — check endpoint/key)</span></label>
+            <input v-model="a2.model" list="a2-models" placeholder="type or pick a model id"
+              class="w-full mb-3 mt-1 text-sm bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500" />
+            <datalist id="a2-models">
+              <option v-for="m in a2.models" :key="m" :value="m"></option>
+            </datalist>
             <label class="text-xs text-slate-500">Endpoint (OpenAI-compatible)</label>
-            <input v-model="a2.base_url" class="w-full mt-1 text-sm bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500" />
+            <input v-model="a2.base_url" @blur="refreshModels('a2')" class="w-full mt-1 text-sm bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500" />
           </div>
         </div>
 
@@ -331,9 +335,8 @@ createApp({
       stats: { total_runs:0, passed:0, blocked:0, errored:0, audit_entries:0, pass_rate:0 },
       runs: [],
 
-      models: [],
-      a1: { key:'', model:'', base_url:'https://openrouter.ai/api/v1/chat/completions' },
-      a2: { key:'', model:'', base_url:'https://openrouter.ai/api/v1/chat/completions' },
+      a1: { key:'', model:'', base_url:'https://openrouter.ai/api/v1/chat/completions', models:[], live:false },
+      a2: { key:'', model:'', base_url:'https://openrouter.ai/api/v1/chat/completions', models:[], live:false },
 
       clientText: '',
       pilotReportFile: null,
@@ -361,14 +364,18 @@ createApp({
     },
   },
   methods: {
-    async loadModels() {
+    async refreshModels(which) {
+      const agent = this[which];
       try {
-        const res = await fetch(`${API}/models`);
+        const params = new URLSearchParams({ base_url: agent.base_url, api_key: agent.key || '' });
+        const res = await fetch(`${API}/models?${params.toString()}`);
         const data = await res.json();
-        this.models = data.models;
-        this.a1.model = this.models[0];
-        this.a2.model = this.models[1] || this.models[0];
-      } catch (e) { /* handled by health check */ }
+        agent.models = data.models;
+        agent.live = data.live;
+        if (!agent.model || !agent.models.includes(agent.model)) agent.model = agent.models[0] || '';
+      } catch (e) {
+        agent.live = false;
+      }
     },
     async loadDashboard() {
       try {
@@ -427,8 +434,9 @@ createApp({
       }
     },
   },
-  mounted() {
-    this.loadModels();
+  async mounted() {
+    await Promise.all([this.refreshModels('a1'), this.refreshModels('a2')]);
+    if (this.a2.model === this.a1.model && this.a2.models.length > 1) this.a2.model = this.a2.models[1];
     this.loadDashboard();
     this.loadAudit();
   },

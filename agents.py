@@ -16,7 +16,8 @@ from typing import Optional
 from schemas import AgentConfig, PMOutput, SAOutput
 
 # ──────────────────────────────────────────────
-# Open-source model choices (OpenRouter model ids)
+# Fallback model list, used only if the live catalog fetch below fails
+# (e.g. no network, or an unreachable/custom endpoint).
 # ──────────────────────────────────────────────
 OPEN_SOURCE_MODELS = [
     "meta-llama/llama-3.1-70b-instruct",
@@ -26,6 +27,35 @@ OPEN_SOURCE_MODELS = [
     "qwen/qwen-2.5-72b-instruct",
     "deepseek/deepseek-chat",
 ]
+
+
+def fetch_available_models(base_url: str, api_key: str = "") -> list:
+    """Fetch the live model catalog from an OpenAI-compatible endpoint
+    (OpenRouter, Groq, Together.ai, etc). OpenRouter's catalog includes
+    free-tier models from many vendors (Llama, Mistral, Qwen, DeepSeek,
+    Gemini, and others) — this is why the dropdown should be fetched live
+    rather than hardcoded to a handful of ids.
+
+    Returns a sorted list of model id strings. Raises AgentError if the
+    endpoint can't be reached or doesn't return a recognizable model list.
+    """
+    models_url = base_url.rsplit("/chat/completions", 1)[0].rstrip("/") + "/models"
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+
+    try:
+        resp = requests.get(models_url, headers=headers, timeout=15)
+    except requests.RequestException as e:
+        raise AgentError(f"Could not reach {models_url}: {e}")
+
+    if not resp.ok:
+        raise AgentError(f"{models_url} returned {resp.status_code}")
+
+    data = resp.json()
+    entries = data.get("data", data if isinstance(data, list) else [])
+    ids = sorted({m["id"] for m in entries if isinstance(m, dict) and "id" in m})
+    if not ids:
+        raise AgentError(f"{models_url} returned no models")
+    return ids
 
 PM_SYSTEM = """You are the Product Manager Agent in a pharmaceutical technology-transfer pipeline.
 
