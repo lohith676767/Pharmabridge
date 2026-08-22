@@ -10,10 +10,56 @@ only Agent 1's structured JSON, to prevent context drift.
 
 import json
 import io
+import os
 import requests
 from typing import Optional
+from urllib.parse import urlparse
 
 from schemas import AgentConfig, PMOutput, SAOutput
+
+# ──────────────────────────────────────────────
+# Provider allowlist (SSRF guard)
+#
+# The agent endpoint is chosen in the browser, and the server then makes a
+# request to it. Without a allowlist a public deployment would happily
+# fetch attacker-chosen internal addresses (cloud metadata services,
+# localhost admin ports, other hosts on the private network) on their
+# behalf. Restrict outbound calls to known model providers over HTTPS.
+#
+# Set PHARMABRIDGE_ALLOW_ANY_ENDPOINT=1 for local development against a
+# self-hosted model server (Ollama, vLLM); never set it on a public host.
+# ──────────────────────────────────────────────
+ALLOWED_PROVIDER_HOSTS = {
+    "openrouter.ai",
+    "api.groq.com",
+    "api.together.xyz",
+    "api.openai.com",
+    "api.mistral.ai",
+    "api.deepseek.com",
+    "api.anthropic.com",
+    "generativelanguage.googleapis.com",
+    "api.cerebras.ai",
+    "api.fireworks.ai",
+}
+
+
+def _allow_any_endpoint() -> bool:
+    return os.environ.get("PHARMABRIDGE_ALLOW_ANY_ENDPOINT", "").strip() in ("1", "true", "yes")
+
+
+def check_endpoint_allowed(base_url: str) -> None:
+    """Raise AgentError unless base_url points at an allowlisted provider."""
+    if _allow_any_endpoint():
+        return
+
+    parsed = urlparse(base_url)
+    if parsed.scheme != "https":
+        raise AgentError(f"Endpoint must use https:// — got {parsed.scheme or 'no scheme'}")
+
+    host = (parsed.hostname or "").lower()
+    if host not in ALLOWED_PROVIDER_HOSTS:
+        allowed = ", ".join(sorted(ALLOWED_PROVIDER_HOSTS))
+        raise AgentError(f"Endpoint host '{host}' is not an allowed model provider. Allowed: {allowed}")
 
 # ──────────────────────────────────────────────
 # Fallback model list, used only if the live catalog fetch below fails
@@ -39,6 +85,7 @@ def fetch_available_models(base_url: str, api_key: str = "") -> list:
     Returns a sorted list of model id strings. Raises AgentError if the
     endpoint can't be reached or doesn't return a recognizable model list.
     """
+    check_endpoint_allowed(base_url)
     models_url = base_url.rsplit("/chat/completions", 1)[0].rstrip("/") + "/models"
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
 
@@ -145,6 +192,8 @@ def call_agent(config: AgentConfig, system: str, user_content: str) -> str:
     agent's own API key and model (independent per-agent configuration)."""
     if not config.api_key:
         raise AgentError("Missing API key for this agent")
+
+    check_endpoint_allowed(config.base_url)
 
     headers = {
         "Authorization": f"Bearer {config.api_key}",

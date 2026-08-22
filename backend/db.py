@@ -6,13 +6,17 @@ of every step taken during that run.
 """
 
 import json
+import os
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator, Optional
 
-DB_PATH = Path(__file__).parent / "pharmabridge.db"
+# Overridable so a deployment can point this at a mounted persistent disk.
+# On hosts with an ephemeral filesystem (e.g. free tiers) the default path
+# is wiped on every redeploy/restart — set PHARMABRIDGE_DB to keep history.
+DB_PATH = Path(os.environ.get("PHARMABRIDGE_DB") or (Path(__file__).parent / "pharmabridge.db"))
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS runs (
@@ -55,6 +59,7 @@ def get_conn() -> Iterator[sqlite3.Connection]:
 
 
 def init_db() -> None:
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     with get_conn() as conn:
         conn.executescript(SCHEMA)
 

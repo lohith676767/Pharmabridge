@@ -4,6 +4,7 @@ Exposes the two-agent tech-transfer pipeline as a REST API, persists every
 run and its audit trail to SQLite, and serves the static frontend.
 """
 
+import os
 import sys
 from pathlib import Path
 from typing import Optional
@@ -34,12 +35,16 @@ FRONTEND_DIR = ROOT_DIR / "frontend"
 
 app = FastAPI(title="PharmaBridge AI API", version="1.0.0")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# The frontend is served by this same app, so cross-origin access is not
+# needed by default. Set ALLOWED_ORIGINS (comma-separated) to open it up.
+_origins = [o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o.strip()]
+if _origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_origins,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 
 @app.on_event("startup")

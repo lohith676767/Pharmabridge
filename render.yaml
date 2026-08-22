@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: pharmabridge
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.api:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.6"
+      - key: ENV
+        value: production
+      # Free tier has an ephemeral filesystem: run history resets on every
+      # redeploy. Attach a persistent disk and point this at it to keep it.
+      # - key: PHARMABRIDGE_DB
+      #   value: /var/data/pharmabridge.db
