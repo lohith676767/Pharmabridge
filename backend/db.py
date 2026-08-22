@@ -1,8 +1,16 @@
-"""SQLite persistence layer for pipeline runs and the audit trail.
+"""Persistence layer for pipeline runs and the audit trail.
 
-Kept intentionally small (stdlib sqlite3, no ORM) since the data model is
-just two tables: one row per pipeline run, and an append-only audit log
-of every step taken during that run.
+Two backends, same API:
+
+  * Postgres — used when DATABASE_URL is set (e.g. a hosted Neon/Supabase
+    instance). This is what a deployment should use: the data lives off
+    the web host, so run history survives redeploys and restarts.
+  * SQLite — the local-dev fallback, so running the app on your machine
+    needs no database setup at all.
+
+Kept intentionally small (no ORM) since the data model is just two tables:
+one row per pipeline run, and an append-only audit log of every step taken
+during that run.
 """
 
 import json
@@ -13,12 +21,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator, Optional
 
-# Overridable so a deployment can point this at a mounted persistent disk.
-# On hosts with an ephemeral filesystem (e.g. free tiers) the default path
-# is wiped on every redeploy/restart — set PHARMABRIDGE_DB to keep history.
+DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
+USE_POSTGRES = DATABASE_URL.startswith(("postgres://", "postgresql://"))
+
+# SQLite path, used only when DATABASE_URL is unset. Overridable so a host
+# with a mounted persistent disk can point at it instead.
 DB_PATH = Path(os.environ.get("PHARMABRIDGE_DB") or (Path(__file__).parent / "pharmabridge.db"))
 
-SCHEMA = """
+# Same tables either way; only the auto-increment syntax differs.
+_SCHEMA_SQLITE = """
 CREATE TABLE IF NOT EXISTS runs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     created_at TEXT NOT NULL,
@@ -42,15 +53,50 @@ CREATE TABLE IF NOT EXISTS audit_log (
 );
 """
 
+_SCHEMA_POSTGRES = """
+CREATE TABLE IF NOT EXISTS runs (
+    id SERIAL PRIMARY KEY,
+    created_at TEXT NOT NULL,
+    client_text TEXT,
+    pilot_report_filename TEXT,
+    lab_notes_filename TEXT,
+    pm_json TEXT,
+    validation_json TEXT,
+    sa_json TEXT,
+    status TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS audit_log (
+    id SERIAL PRIMARY KEY,
+    run_id INTEGER NOT NULL REFERENCES runs(id),
+    timestamp TEXT NOT NULL,
+    agent TEXT NOT NULL,
+    event TEXT NOT NULL,
+    detail TEXT,
+    status TEXT NOT NULL
+);
+"""
+
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+def _q(sql: str) -> str:
+    """Queries are written with SQLite's '?' placeholder; psycopg wants '%s'."""
+    return sql.replace("?", "%s") if USE_POSTGRES else sql
+
+
 @contextmanager
-def get_conn() -> Iterator[sqlite3.Connection]:
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
+def get_conn() -> Iterator:
+    if USE_POSTGRES:
+        import psycopg
+        from psycopg.rows import dict_row
+
+        conn = psycopg.connect(DATABASE_URL, row_factory=dict_row)
+    else:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
     try:
         yield conn
         conn.commit()
@@ -59,18 +105,26 @@ def get_conn() -> Iterator[sqlite3.Connection]:
 
 
 def init_db() -> None:
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with get_conn() as conn:
-        conn.executescript(SCHEMA)
+    if USE_POSTGRES:
+        with get_conn() as conn:
+            conn.execute(_SCHEMA_POSTGRES)
+    else:
+        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with get_conn() as conn:
+            conn.executescript(_SCHEMA_SQLITE)
 
 
 def create_run(client_text: str, pilot_report_filename: Optional[str], lab_notes_filename: Optional[str]) -> int:
+    sql = (
+        "INSERT INTO runs (created_at, client_text, pilot_report_filename, lab_notes_filename, status) "
+        "VALUES (?, ?, ?, ?, 'RUNNING')"
+    )
+    params = (_now(), client_text, pilot_report_filename, lab_notes_filename)
     with get_conn() as conn:
-        cur = conn.execute(
-            "INSERT INTO runs (created_at, client_text, pilot_report_filename, lab_notes_filename, status) "
-            "VALUES (?, ?, ?, ?, 'RUNNING')",
-            (_now(), client_text, pilot_report_filename, lab_notes_filename),
-        )
+        if USE_POSTGRES:
+            cur = conn.execute(_q(sql) + " RETURNING id", params)
+            return cur.fetchone()["id"]
+        cur = conn.execute(sql, params)
         return cur.lastrowid
 
 
@@ -92,13 +146,13 @@ def update_run(run_id: int, *, pm=None, validation=None, sa=None, status: Option
         return
     values.append(run_id)
     with get_conn() as conn:
-        conn.execute(f"UPDATE runs SET {', '.join(fields)} WHERE id = ?", values)
+        conn.execute(_q(f"UPDATE runs SET {', '.join(fields)} WHERE id = ?"), values)
 
 
 def add_audit_entry(run_id: int, agent: str, event: str, detail: str, status: str) -> None:
     with get_conn() as conn:
         conn.execute(
-            "INSERT INTO audit_log (run_id, timestamp, agent, event, detail, status) VALUES (?, ?, ?, ?, ?, ?)",
+            _q("INSERT INTO audit_log (run_id, timestamp, agent, event, detail, status) VALUES (?, ?, ?, ?, ?, ?)"),
             (run_id, _now(), agent, event, detail, status),
         )
 
@@ -106,7 +160,7 @@ def add_audit_entry(run_id: int, agent: str, event: str, detail: str, status: st
 def list_runs(limit: int = 50) -> list[dict]:
     with get_conn() as conn:
         rows = conn.execute(
-            "SELECT id, created_at, client_text, status, pm_json FROM runs ORDER BY id DESC LIMIT ?",
+            _q("SELECT id, created_at, client_text, status, pm_json FROM runs ORDER BY id DESC LIMIT ?"),
             (limit,),
         ).fetchall()
     result = []
@@ -125,7 +179,7 @@ def list_runs(limit: int = 50) -> list[dict]:
 
 def get_run(run_id: int) -> Optional[dict]:
     with get_conn() as conn:
-        row = conn.execute("SELECT * FROM runs WHERE id = ?", (run_id,)).fetchone()
+        row = conn.execute(_q("SELECT * FROM runs WHERE id = ?"), (run_id,)).fetchone()
     if row is None:
         return None
     return {
@@ -156,17 +210,17 @@ def list_audit(run_id: Optional[int] = None, status: Optional[str] = None, agent
     query += " ORDER BY id DESC LIMIT ?"
     params.append(limit)
     with get_conn() as conn:
-        rows = conn.execute(query, params).fetchall()
+        rows = conn.execute(_q(query), params).fetchall()
     return [dict(r) for r in rows]
 
 
 def dashboard_stats() -> dict:
     with get_conn() as conn:
-        total_runs = conn.execute("SELECT COUNT(*) c FROM runs").fetchone()["c"]
-        passed = conn.execute("SELECT COUNT(*) c FROM runs WHERE status = 'PASSED'").fetchone()["c"]
-        blocked = conn.execute("SELECT COUNT(*) c FROM runs WHERE status = 'BLOCKED'").fetchone()["c"]
-        errored = conn.execute("SELECT COUNT(*) c FROM runs WHERE status = 'ERROR'").fetchone()["c"]
-        audit_total = conn.execute("SELECT COUNT(*) c FROM audit_log").fetchone()["c"]
+        total_runs = conn.execute("SELECT COUNT(*) AS c FROM runs").fetchone()["c"]
+        passed = conn.execute("SELECT COUNT(*) AS c FROM runs WHERE status = 'PASSED'").fetchone()["c"]
+        blocked = conn.execute("SELECT COUNT(*) AS c FROM runs WHERE status = 'BLOCKED'").fetchone()["c"]
+        errored = conn.execute("SELECT COUNT(*) AS c FROM runs WHERE status = 'ERROR'").fetchone()["c"]
+        audit_total = conn.execute("SELECT COUNT(*) AS c FROM audit_log").fetchone()["c"]
     return {
         "total_runs": total_runs,
         "passed": passed,

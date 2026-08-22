@@ -11,7 +11,9 @@ services:
         value: "3.12.6"
       - key: ENV
         value: production
-      # Free tier has an ephemeral filesystem: run history resets on every
-      # redeploy. Attach a persistent disk and point this at it to keep it.
-      # - key: PHARMABRIDGE_DB
-      #   value: /var/data/pharmabridge.db
+      # Postgres connection string (e.g. from Neon). Run history lives in
+      # this database rather than on the web host's ephemeral disk, so it
+      # survives redeploys and restarts. Paste the value into the Render
+      # dashboard — sync:false keeps the credential out of this repo.
+      - key: DATABASE_URL
+        sync: false
