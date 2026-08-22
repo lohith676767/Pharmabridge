@@ -4,50 +4,59 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>PharmaBridge AI — Tech Transfer System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <style>
+  html{font-size:17px}
   [v-cloak]{display:none}
   *{box-sizing:border-box}
   body{margin:0}
-  ::-webkit-scrollbar{width:4px;height:4px}
+  ::-webkit-scrollbar{width:5px;height:5px}
   ::-webkit-scrollbar-track{background:transparent}
-  ::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
+  ::-webkit-scrollbar-thumb{background:#334155;border-radius:3px}
   .bar-fill{transition:width .8s cubic-bezier(.4,0,.2,1)}
+  .card{transition:border-color .2s ease, box-shadow .2s ease, transform .2s ease}
+  .card:hover{border-color:#334155;box-shadow:0 8px 24px -8px rgba(0,0,0,.5)}
+  .btn-primary{transition:filter .15s ease, box-shadow .15s ease, transform .1s ease}
+  .btn-primary:hover:not(:disabled){filter:brightness(1.1)}
+  .btn-primary:active:not(:disabled){transform:translateY(1px)}
 </style>
-<script>tailwind.config={darkMode:'class',theme:{extend:{}}}</script>
+<script>tailwind.config={darkMode:'class',theme:{extend:{fontFamily:{sans:['Inter','ui-sans-serif','system-ui','sans-serif']}}}}</script>
 </head>
 <body class="bg-slate-950 text-slate-200 font-sans antialiased">
 <div id="app" v-cloak class="flex h-screen overflow-hidden">
 
   <!-- SIDEBAR -->
-  <aside class="w-60 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0">
+  <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0">
     <div class="p-5 border-b border-slate-800">
       <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white text-sm">Pb</div>
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-950/50 flex items-center justify-center font-bold text-white text-base">Pb</div>
         <div>
-          <div class="font-semibold text-white text-sm leading-tight">PharmaBridge AI</div>
-          <div class="text-xs text-slate-500">Tech Transfer OS</div>
+          <div class="font-bold text-white text-base leading-tight tracking-tight">PharmaBridge AI</div>
+          <div class="text-sm text-slate-500">Tech Transfer OS</div>
         </div>
       </div>
     </div>
 
-    <nav class="flex-1 p-3 space-y-0.5 overflow-y-auto">
+    <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
       <div v-for="item in navItems" :key="item.id"
         @click="activeView = item.id"
-        :class="['flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer select-none transition-all text-sm',
+        :class="['flex items-center gap-3 px-3.5 py-3 rounded-xl cursor-pointer select-none transition-all text-base border-l-2',
           activeView === item.id
-            ? 'bg-blue-600/20 text-blue-300 border border-blue-600/30'
-            : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent']">
-        <span class="text-base w-5 text-center">{{ item.icon }}</span>
+            ? 'bg-blue-600/15 text-blue-300 border-blue-500'
+            : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-200 border-transparent']">
+        <span class="text-lg w-5 text-center">{{ item.icon }}</span>
         <span class="font-medium flex-1">{{ item.label }}</span>
       </div>
     </nav>
 
-    <div class="p-4 border-t border-slate-800 space-y-2">
+    <div class="p-4 border-t border-slate-800 space-y-2.5">
       <div class="flex items-center gap-2">
-        <div :class="['w-2 h-2 rounded-full shrink-0', apiOnline ? 'bg-green-500' : 'bg-red-500']"></div>
-        <span class="text-xs text-slate-400">{{ apiOnline ? 'API connected' : 'API unreachable' }}</span>
+        <div :class="['w-2 h-2 rounded-full shrink-0', apiOnline ? 'bg-green-500 shadow shadow-green-500/50' : 'bg-red-500 shadow shadow-red-500/50']"></div>
+        <span class="text-sm text-slate-400">{{ apiOnline ? 'API connected' : 'API unreachable' }}</span>
       </div>
       <div class="text-xs text-slate-600">Rockathon'26 — PS2 · SSNCE</div>
     </div>
@@ -55,12 +64,12 @@
 
   <!-- MAIN -->
   <div class="flex-1 flex flex-col overflow-hidden">
-    <header class="shrink-0 bg-slate-950/90 backdrop-blur border-b border-slate-800 px-8 py-4 flex items-center justify-between">
+    <header class="shrink-0 bg-slate-950/90 backdrop-blur border-b border-slate-800 px-8 py-5 flex items-center justify-between">
       <div>
-        <h1 class="text-base font-semibold text-white">{{ currentNav.label }}</h1>
-        <p class="text-xs text-slate-500">{{ currentNav.description }}</p>
+        <h1 class="text-xl font-bold text-white tracking-tight">{{ currentNav.label }}</h1>
+        <p class="text-sm text-slate-500 mt-0.5">{{ currentNav.description }}</p>
       </div>
-      <div :class="['text-xs px-3 py-1.5 rounded-full font-medium border transition-colors',
+      <div :class="['text-sm px-3.5 py-1.5 rounded-full font-semibold border transition-colors',
         stats.pass_rate >= 80 ? 'bg-green-500/10 text-green-400 border-green-500/20'
         : stats.pass_rate >= 50 ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
         : 'bg-red-500/10 text-red-400 border-red-500/20']">
@@ -73,40 +82,40 @@
       <!-- ═══════════ DASHBOARD ═══════════ -->
       <div v-if="activeView === 'dashboard'">
         <div class="grid grid-cols-4 gap-4 mb-8">
-          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
-            <div class="text-xl mb-2">🧪</div>
-            <div class="text-2xl font-bold text-white mb-0.5">{{ stats.total_runs }}</div>
-            <div class="text-xs text-slate-500">Total pipeline runs</div>
+          <div class="card bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+            <div class="w-11 h-11 rounded-xl bg-blue-500/10 flex items-center justify-center text-xl mb-3">🧪</div>
+            <div class="text-3xl font-bold text-white mb-0.5 tracking-tight">{{ stats.total_runs }}</div>
+            <div class="text-sm text-slate-500">Total pipeline runs</div>
           </div>
-          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
-            <div class="text-xl mb-2">✅</div>
-            <div class="text-2xl font-bold text-white mb-0.5">{{ stats.passed }}</div>
-            <div class="text-xs text-slate-500">Handoffs passed</div>
+          <div class="card bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+            <div class="w-11 h-11 rounded-xl bg-green-500/10 flex items-center justify-center text-xl mb-3">✅</div>
+            <div class="text-3xl font-bold text-white mb-0.5 tracking-tight">{{ stats.passed }}</div>
+            <div class="text-sm text-slate-500">Handoffs passed</div>
           </div>
-          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
-            <div class="text-xl mb-2">🚫</div>
-            <div class="text-2xl font-bold text-white mb-0.5">{{ stats.blocked }}</div>
-            <div class="text-xs text-slate-500">Handoffs blocked</div>
+          <div class="card bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+            <div class="w-11 h-11 rounded-xl bg-red-500/10 flex items-center justify-center text-xl mb-3">🚫</div>
+            <div class="text-3xl font-bold text-white mb-0.5 tracking-tight">{{ stats.blocked }}</div>
+            <div class="text-sm text-slate-500">Handoffs blocked</div>
           </div>
-          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
-            <div class="text-xl mb-2">📋</div>
-            <div class="text-2xl font-bold text-white mb-0.5">{{ stats.audit_entries }}</div>
-            <div class="text-xs text-slate-500">Audit log entries</div>
+          <div class="card bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+            <div class="w-11 h-11 rounded-xl bg-indigo-500/10 flex items-center justify-center text-xl mb-3">📋</div>
+            <div class="text-3xl font-bold text-white mb-0.5 tracking-tight">{{ stats.audit_entries }}</div>
+            <div class="text-sm text-slate-500">Audit log entries</div>
           </div>
         </div>
 
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
-          <div class="flex items-center justify-between mb-4">
-            <div class="font-semibold text-white text-sm">Recent runs</div>
-            <button @click="activeView='pipeline'" class="text-xs px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-500">+ New run</button>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm">
+          <div class="flex items-center justify-between mb-5">
+            <div class="font-bold text-white text-base tracking-tight">Recent runs</div>
+            <button @click="activeView='pipeline'" class="btn-primary text-sm font-semibold px-4 py-2 rounded-lg bg-blue-600 text-white shadow-md shadow-blue-950/40">+ New run</button>
           </div>
-          <div v-if="runs.length === 0" class="text-sm text-slate-500 py-8 text-center">No runs yet — start one from the Pipeline tab.</div>
-          <div v-for="r in runs" :key="r.id" class="flex items-center justify-between py-3 border-b border-slate-800/50 last:border-0">
+          <div v-if="runs.length === 0" class="text-base text-slate-500 py-10 text-center">No runs yet — start one from the Pipeline tab.</div>
+          <div v-for="r in runs" :key="r.id" class="flex items-center justify-between py-3.5 border-b border-slate-800/50 last:border-0">
             <div>
-              <div class="text-sm text-slate-200">Run #{{ r.id }} — {{ (r.client_text || '(no brief text)').slice(0,70) }}{{ r.client_text && r.client_text.length>70 ? '…' : '' }}</div>
-              <div class="text-xs text-slate-500 mt-0.5">{{ r.created_at }} · {{ r.parameter_count }} parameter(s) · confidence: {{ r.confidence || '—' }}</div>
+              <div class="text-base text-slate-200 font-medium">Run #{{ r.id }} — {{ (r.client_text || '(no brief text)').slice(0,70) }}{{ r.client_text && r.client_text.length>70 ? '…' : '' }}</div>
+              <div class="text-sm text-slate-500 mt-0.5">{{ r.created_at }} · {{ r.parameter_count }} parameter(s) · confidence: {{ r.confidence || '—' }}</div>
             </div>
-            <span :class="['text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap',
+            <span :class="['text-sm px-3 py-1 rounded-full font-semibold whitespace-nowrap',
               r.status==='PASSED'?'bg-green-500/15 text-green-400'
               :r.status==='BLOCKED'?'bg-red-500/15 text-red-400'
               :r.status==='ERROR'?'bg-red-500/15 text-red-400'
@@ -119,139 +128,145 @@
       <div v-if="activeView === 'pipeline'">
 
         <!-- Agent config -->
-        <div class="grid grid-cols-2 gap-4 mb-6">
-          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
-            <div class="font-semibold text-white text-sm mb-3">🧠 Agent 1 — Product Manager</div>
-            <label class="text-xs text-slate-500">API key</label>
-            <input v-model="a1.key" @blur="refreshModels('a1')" type="password" placeholder="sk-..." class="w-full mb-3 mt-1 text-sm bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500" />
-            <label class="text-xs text-slate-500">Model <span v-if="a1.live" class="text-green-400">(live catalog)</span><span v-else class="text-yellow-400">(fallback list — check endpoint/key)</span></label>
+        <div class="grid grid-cols-2 gap-5 mb-6">
+          <div class="card bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+            <div class="font-bold text-white text-base mb-4 flex items-center gap-2"><span class="text-lg">🧠</span> Agent 1 — Product Manager</div>
+            <label class="text-sm text-slate-500 font-medium">API key</label>
+            <input v-model="a1.key" @blur="refreshModels('a1')" type="password" placeholder="sk-..." class="w-full mb-3.5 mt-1.5 text-base bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40" />
+            <label class="text-sm text-slate-500 font-medium">Model <span v-if="a1.live" class="text-green-400">(live catalog)</span><span v-else class="text-yellow-400">(fallback list — check endpoint/key)</span></label>
             <input v-model="a1.model" list="a1-models" placeholder="type or pick a model id"
-              class="w-full mb-3 mt-1 text-sm bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500" />
+              class="w-full mb-3.5 mt-1.5 text-base bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40" />
             <datalist id="a1-models">
               <option v-for="m in a1.models" :key="m" :value="m"></option>
             </datalist>
-            <label class="text-xs text-slate-500">Endpoint (OpenAI-compatible)</label>
-            <input v-model="a1.base_url" @blur="refreshModels('a1')" class="w-full mt-1 text-sm bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500" />
+            <label class="text-sm text-slate-500 font-medium">Endpoint (OpenAI-compatible)</label>
+            <input v-model="a1.base_url" @blur="refreshModels('a1')" class="w-full mt-1.5 text-base bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40" />
           </div>
-          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
-            <div class="font-semibold text-white text-sm mb-3">⚙ Agent 2 — Solution Architect</div>
-            <label class="text-xs text-slate-500">API key</label>
-            <input v-model="a2.key" @blur="refreshModels('a2')" type="password" placeholder="sk-..." class="w-full mb-3 mt-1 text-sm bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500" />
-            <label class="text-xs text-slate-500">Model <span v-if="a2.live" class="text-green-400">(live catalog)</span><span v-else class="text-yellow-400">(fallback list — check endpoint/key)</span></label>
+          <div class="card bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+            <div class="font-bold text-white text-base mb-4 flex items-center gap-2"><span class="text-lg">⚙</span> Agent 2 — Solution Architect</div>
+            <label class="text-sm text-slate-500 font-medium">API key</label>
+            <input v-model="a2.key" @blur="refreshModels('a2')" type="password" placeholder="sk-..." class="w-full mb-3.5 mt-1.5 text-base bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40" />
+            <label class="text-sm text-slate-500 font-medium">Model <span v-if="a2.live" class="text-green-400">(live catalog)</span><span v-else class="text-yellow-400">(fallback list — check endpoint/key)</span></label>
             <input v-model="a2.model" list="a2-models" placeholder="type or pick a model id"
-              class="w-full mb-3 mt-1 text-sm bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500" />
+              class="w-full mb-3.5 mt-1.5 text-base bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40" />
             <datalist id="a2-models">
               <option v-for="m in a2.models" :key="m" :value="m"></option>
             </datalist>
-            <label class="text-xs text-slate-500">Endpoint (OpenAI-compatible)</label>
-            <input v-model="a2.base_url" @blur="refreshModels('a2')" class="w-full mt-1 text-sm bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500" />
+            <label class="text-sm text-slate-500 font-medium">Endpoint (OpenAI-compatible)</label>
+            <input v-model="a2.base_url" @blur="refreshModels('a2')" class="w-full mt-1.5 text-base bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40" />
           </div>
         </div>
 
         <!-- Inputs -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6">
-          <div class="font-semibold text-white text-sm mb-4">Agent 1 inputs</div>
-          <div class="grid grid-cols-3 gap-4">
+        <div class="card bg-slate-900 border border-slate-800 rounded-2xl p-5 mb-6 shadow-sm">
+          <div class="font-bold text-white text-base mb-4">Agent 1 inputs</div>
+          <div class="grid grid-cols-3 gap-5">
             <div>
-              <label class="text-xs text-slate-500">1. Pilot report (.pdf)</label>
+              <label class="text-sm text-slate-500 font-medium">1. Pilot report (.pdf)</label>
               <input type="file" accept=".pdf" @change="e => pilotReportFile = e.target.files[0]"
-                class="w-full mt-1 text-xs text-slate-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-slate-800 file:text-slate-300 file:text-xs" />
+                class="w-full mt-1.5 text-sm text-slate-400 file:mr-3 file:py-2 file:px-3.5 file:rounded-lg file:border-0 file:bg-slate-800 file:text-slate-300 file:text-sm file:font-medium" />
             </div>
             <div>
-              <label class="text-xs text-slate-500">2. Lab notes / ELN export (.pdf, .jpg, .png, .txt, .csv)</label>
+              <label class="text-sm text-slate-500 font-medium">2. Lab notes / ELN export (.pdf, .jpg, .png, .txt, .csv)</label>
               <input type="file" accept=".pdf,.jpg,.jpeg,.png,.txt,.csv" @change="e => labNotesFile = e.target.files[0]"
-                class="w-full mt-1 text-xs text-slate-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-slate-800 file:text-slate-300 file:text-xs" />
+                class="w-full mt-1.5 text-sm text-slate-400 file:mr-3 file:py-2 file:px-3.5 file:rounded-lg file:border-0 file:bg-slate-800 file:text-slate-300 file:text-sm file:font-medium" />
             </div>
             <div>
-              <label class="text-xs text-slate-500">3. Vague client text</label>
+              <label class="text-sm text-slate-500 font-medium">3. Vague client text</label>
               <textarea v-model="clientText" rows="3" placeholder="Transfer our pilot-scale process to mass production..."
-                class="w-full mt-1 text-sm bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500 resize-none"></textarea>
+                class="w-full mt-1.5 text-base bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40 resize-none"></textarea>
             </div>
           </div>
-          <div class="flex items-center gap-3 mt-4">
+          <div class="flex items-center gap-3 mt-5">
             <button @click="runPipeline" :disabled="running"
-              class="text-sm font-medium px-5 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+              class="btn-primary text-base font-semibold px-6 py-3 rounded-xl bg-blue-600 text-white shadow-md shadow-blue-950/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
               <span v-if="running" class="animate-spin">⏳</span>▶ {{ running ? 'Running pipeline...' : 'Run pipeline' }}
             </button>
-            <button @click="resetPipeline" class="text-sm px-4 py-2.5 rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700">↺ Reset</button>
-            <span v-if="runError" class="text-xs text-red-400">{{ runError }}</span>
+            <button @click="resetPipeline" class="btn-primary text-base font-medium px-5 py-3 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700">↺ Reset</button>
+            <span v-if="runError" class="text-sm text-red-400 font-medium">{{ runError }}</span>
           </div>
         </div>
 
-        <!-- Progress -->
-        <div v-if="running || pm" class="mb-6">
-          <div class="flex items-center gap-2 text-xs text-slate-400">
-            <span v-for="(s,i) in steps" :key="s" class="flex items-center gap-2">
-              <span :class="['px-2 py-1 rounded-full', i <= stepIdx ? 'bg-blue-600/20 text-blue-300 border border-blue-600/30' : 'bg-slate-800 text-slate-500']">{{ s }}</span>
-              <span v-if="i < steps.length-1" class="text-slate-700">→</span>
-            </span>
+        <!-- Progress stepper -->
+        <div v-if="running || pm" class="card bg-slate-900 border border-slate-800 rounded-2xl px-6 py-5 mb-6 shadow-sm">
+          <div class="flex items-center">
+            <template v-for="(s,i) in steps" :key="s">
+              <div class="flex flex-col items-center gap-2 shrink-0">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all"
+                  :class="i < stepIdx ? 'bg-blue-600 border-blue-600 text-white' : i === stepIdx ? 'border-blue-500 text-blue-400 bg-blue-500/10' : 'border-slate-700 text-slate-600'">
+                  <span v-if="i < stepIdx">✓</span><span v-else>{{ i + 1 }}</span>
+                </div>
+                <span class="text-sm font-medium whitespace-nowrap" :class="i <= stepIdx ? 'text-blue-300' : 'text-slate-600'">{{ s }}</span>
+              </div>
+              <div v-if="i < steps.length - 1" class="flex-1 h-0.5 mx-3 rounded" :class="i < stepIdx ? 'bg-blue-600' : 'bg-slate-800'"></div>
+            </template>
           </div>
         </div>
 
         <!-- Results -->
         <div v-if="pm || sa" class="grid grid-cols-2 gap-6">
-          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
-            <div class="font-semibold text-white text-sm mb-3">Agent 1 — Product Manager</div>
+          <div class="card bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+            <div class="font-bold text-white text-base mb-3.5">Agent 1 — Product Manager</div>
             <div v-if="pm">
-              <span :class="['text-xs px-2.5 py-1 rounded-full font-medium',
+              <span :class="['text-sm px-3 py-1 rounded-full font-semibold',
                 pm.confidence==='Complete'?'bg-green-500/15 text-green-400'
                 :pm.confidence==='Partial'?'bg-yellow-500/15 text-yellow-400'
                 :'bg-red-500/15 text-red-400']">{{ pm.confidence }}</span>
-              <p class="text-sm text-slate-300 mt-3">{{ pm.requirement_summary }}</p>
-              <div v-for="(p,i) in pm.parameters" :key="i" class="bg-slate-800/60 border border-slate-800 rounded-lg p-3 mt-3">
-                <div class="flex justify-between items-start mb-2">
-                  <span class="text-sm font-medium text-slate-200">{{ p.name }}</span>
-                  <span :class="['text-xs px-2 py-0.5 rounded-full',
+              <p class="text-base text-slate-300 mt-3.5 leading-relaxed">{{ pm.requirement_summary }}</p>
+              <div v-for="(p,i) in pm.parameters" :key="i" class="bg-slate-800/60 border border-slate-800 rounded-xl p-3.5 mt-3.5">
+                <div class="flex justify-between items-start mb-2.5">
+                  <span class="text-base font-semibold text-slate-200">{{ p.name }}</span>
+                  <span :class="['text-sm px-2.5 py-0.5 rounded-full font-medium',
                     p.criticality==='High'?'bg-red-500/15 text-red-400'
                     :p.criticality==='Medium'?'bg-yellow-500/15 text-yellow-400'
                     :p.criticality==='Low'?'bg-green-500/15 text-green-400'
                     :'bg-red-500/15 text-red-400']">{{ p.criticality || 'Missing' }}</span>
                 </div>
-                <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-400">
+                <div class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm text-slate-400">
                   <div>Value: <span class="text-slate-300">{{ p.value || '⚠ Missing' }}</span></div>
                   <div>Range: <span class="text-slate-300">{{ p.validated_range || '⚠ Missing' }}</span></div>
                   <div>Scale sens.: <span class="text-slate-300">{{ p.scale_sensitivity || '⚠ Missing' }}</span></div>
                   <div>Evidence: <span class="text-slate-300">{{ p.evidence_source || '⚠ Missing' }}</span></div>
                 </div>
-                <div v-if="p.uncertainty" class="text-xs text-yellow-400 mt-2">⚠ {{ p.uncertainty }}</div>
+                <div v-if="p.uncertainty" class="text-sm text-yellow-400 mt-2.5">⚠ {{ p.uncertainty }}</div>
               </div>
-              <div v-if="pm.open_questions && pm.open_questions.length" class="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 mt-3">
-                <div class="text-xs font-medium text-yellow-400 mb-1">⚠ Clarification required</div>
-                <div v-for="(q,i) in pm.open_questions" :key="i" class="text-xs text-yellow-400">• {{ q }}</div>
+              <div v-if="pm.open_questions && pm.open_questions.length" class="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3.5 mt-3.5">
+                <div class="text-sm font-semibold text-yellow-400 mb-1.5">⚠ Clarification required</div>
+                <div v-for="(q,i) in pm.open_questions" :key="i" class="text-sm text-yellow-400">• {{ q }}</div>
               </div>
             </div>
-            <div v-else class="text-sm text-slate-500 py-8 text-center">Awaiting pipeline run</div>
+            <div v-else class="text-base text-slate-500 py-10 text-center">Awaiting pipeline run</div>
           </div>
 
-          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
-            <div class="font-semibold text-white text-sm mb-3">Agent 2 — Solution Architect</div>
+          <div class="card bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+            <div class="font-bold text-white text-base mb-3.5">Agent 2 — Solution Architect</div>
             <div v-if="sa">
-              <div v-if="sa.handoff_status === 'BLOCKED'" class="bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-3">
-                <div class="text-xs font-medium text-red-400 mb-1">✗ Handoff blocked — no design generated</div>
-                <div v-for="(r,i) in sa.block_reasons" :key="i" class="text-xs text-red-400">• {{ r }}</div>
+              <div v-if="sa.handoff_status === 'BLOCKED'" class="bg-red-500/10 border border-red-500/20 rounded-xl p-3.5 mb-3.5">
+                <div class="text-sm font-semibold text-red-400 mb-1.5">✗ Handoff blocked — no design generated</div>
+                <div v-for="(r,i) in sa.block_reasons" :key="i" class="text-sm text-red-400">• {{ r }}</div>
               </div>
-              <div v-for="(d,i) in sa.manufacturing_design" :key="i" class="bg-slate-800/60 border border-slate-800 rounded-lg p-3 mb-3">
-                <div class="flex justify-between items-start mb-2">
-                  <span class="text-sm font-medium text-slate-200">{{ d.parameter }}</span>
-                  <span :class="['text-xs px-2 py-0.5 rounded-full',
+              <div v-for="(d,i) in sa.manufacturing_design" :key="i" class="bg-slate-800/60 border border-slate-800 rounded-xl p-3.5 mb-3.5">
+                <div class="flex justify-between items-start mb-2.5">
+                  <span class="text-base font-semibold text-slate-200">{{ d.parameter }}</span>
+                  <span :class="['text-sm px-2.5 py-0.5 rounded-full font-medium',
                     d.commercial_scale_status==='Verified'?'bg-green-500/15 text-green-400'
                     :d.commercial_scale_status==='Unverified'?'bg-red-500/15 text-red-400'
                     :'bg-slate-700 text-slate-400']">{{ d.commercial_scale_status || 'N/A' }}</span>
                 </div>
-                <div class="text-xs text-slate-400 space-y-1">
+                <div class="text-sm text-slate-400 space-y-1.5">
                   <div>Control: <span class="text-slate-300">{{ d.control }}</span></div>
                   <div>Monitoring: <span class="text-slate-300">{{ d.monitoring }}</span></div>
                   <div>Validation: <span class="text-slate-300">{{ d.validation_required }}</span></div>
                   <div>Deviation handling: <span class="text-slate-300">{{ d.deviation_handling }}</span></div>
                 </div>
               </div>
-              <div v-if="sa.risk_flags && sa.risk_flags.length" class="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
-                <div class="text-xs font-medium text-yellow-400 mb-1">⚠ Risk flags</div>
-                <div v-for="(r,i) in sa.risk_flags" :key="i" class="text-xs text-yellow-400">• {{ r }}</div>
+              <div v-if="sa.risk_flags && sa.risk_flags.length" class="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3.5">
+                <div class="text-sm font-semibold text-yellow-400 mb-1.5">⚠ Risk flags</div>
+                <div v-for="(r,i) in sa.risk_flags" :key="i" class="text-sm text-yellow-400">• {{ r }}</div>
               </div>
-              <div v-if="sa.recommended_next_step" class="text-xs text-slate-400 bg-slate-800/60 rounded-lg p-3 mt-3">→ {{ sa.recommended_next_step }}</div>
+              <div v-if="sa.recommended_next_step" class="text-sm text-slate-400 bg-slate-800/60 rounded-xl p-3.5 mt-3.5">→ {{ sa.recommended_next_step }}</div>
             </div>
-            <div v-else class="text-sm text-slate-500 py-8 text-center">Awaiting Agent 1 handoff</div>
+            <div v-else class="text-base text-slate-500 py-10 text-center">Awaiting Agent 1 handoff</div>
           </div>
         </div>
       </div>
@@ -260,41 +275,41 @@
       <div v-if="activeView === 'audit'">
         <div class="flex items-center gap-3 mb-6 flex-wrap">
           <select v-model="auditFilter" @change="loadAudit"
-            class="text-sm bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-300 focus:outline-none focus:border-blue-500">
+            class="text-base bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-300 focus:outline-none focus:border-blue-500">
             <option value="">All statuses</option>
             <option>PASS</option><option>BLOCK</option><option>WARN</option><option>INFO</option><option>ERROR</option>
           </select>
           <select v-model="auditAgent" @change="loadAudit"
-            class="text-sm bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-300 focus:outline-none focus:border-blue-500">
+            class="text-base bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-300 focus:outline-none focus:border-blue-500">
             <option value="">All agents</option>
             <option>PM Agent</option><option>SA Agent</option><option>Validation Layer</option><option>System</option>
           </select>
-          <button @click="loadAudit" class="text-xs px-3 py-2 rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700">↻ Refresh</button>
-          <span class="ml-auto text-xs text-slate-500">{{ auditLogs.length }} entries</span>
+          <button @click="loadAudit" class="btn-primary text-sm font-medium px-3.5 py-2.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700">↻ Refresh</button>
+          <span class="ml-auto text-sm text-slate-500">{{ auditLogs.length }} entries</span>
         </div>
 
-        <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-          <table class="w-full text-sm">
+        <div class="card bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+          <table class="w-full text-base">
             <thead>
               <tr class="border-b border-slate-800">
-                <th class="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Timestamp</th>
-                <th class="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Run</th>
-                <th class="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Agent</th>
-                <th class="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Event</th>
-                <th class="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Detail</th>
-                <th class="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                <th class="text-left px-5 py-3.5 text-sm font-semibold text-slate-500 uppercase tracking-wider">Timestamp</th>
+                <th class="text-left px-5 py-3.5 text-sm font-semibold text-slate-500 uppercase tracking-wider">Run</th>
+                <th class="text-left px-5 py-3.5 text-sm font-semibold text-slate-500 uppercase tracking-wider">Agent</th>
+                <th class="text-left px-5 py-3.5 text-sm font-semibold text-slate-500 uppercase tracking-wider">Event</th>
+                <th class="text-left px-5 py-3.5 text-sm font-semibold text-slate-500 uppercase tracking-wider">Detail</th>
+                <th class="text-left px-5 py-3.5 text-sm font-semibold text-slate-500 uppercase tracking-wider">Status</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-if="auditLogs.length === 0"><td colspan="6" class="px-5 py-10 text-center text-slate-500 text-sm">No entries match the current filter</td></tr>
-              <tr v-for="e in auditLogs" :key="e.id" class="border-b border-slate-800/50 hover:bg-slate-800/30">
-                <td class="px-5 py-3.5 font-mono text-xs text-slate-400 whitespace-nowrap">{{ e.timestamp }}</td>
-                <td class="px-5 py-3.5 text-xs text-slate-400">#{{ e.run_id }}</td>
-                <td class="px-5 py-3.5 whitespace-nowrap"><span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-medium">{{ e.agent }}</span></td>
-                <td class="px-5 py-3.5 text-sm text-slate-200">{{ e.event }}</td>
-                <td class="px-5 py-3.5 text-xs text-slate-500 max-w-xs truncate" :title="e.detail">{{ e.detail }}</td>
-                <td class="px-5 py-3.5 whitespace-nowrap">
-                  <span :class="['text-xs px-2.5 py-1 rounded-full font-medium',
+              <tr v-if="auditLogs.length === 0"><td colspan="6" class="px-5 py-12 text-center text-slate-500 text-base">No entries match the current filter</td></tr>
+              <tr v-for="e in auditLogs" :key="e.id" class="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
+                <td class="px-5 py-4 font-mono text-sm text-slate-400 whitespace-nowrap">{{ e.timestamp }}</td>
+                <td class="px-5 py-4 text-sm text-slate-400">#{{ e.run_id }}</td>
+                <td class="px-5 py-4 whitespace-nowrap"><span class="text-sm px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 font-medium">{{ e.agent }}</span></td>
+                <td class="px-5 py-4 text-base text-slate-200">{{ e.event }}</td>
+                <td class="px-5 py-4 text-sm text-slate-500 max-w-xs truncate" :title="e.detail">{{ e.detail }}</td>
+                <td class="px-5 py-4 whitespace-nowrap">
+                  <span :class="['text-sm px-3 py-1 rounded-full font-semibold',
                     e.status==='PASS'?'bg-green-500/15 text-green-400'
                     :e.status==='BLOCK'||e.status==='ERROR'?'bg-red-500/15 text-red-400'
                     :e.status==='WARN'?'bg-yellow-500/15 text-yellow-400'
@@ -305,10 +320,10 @@
           </table>
         </div>
 
-        <div class="mt-4 bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-start gap-3">
+        <div class="mt-4 bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-start gap-3">
           <span class="text-blue-400 text-lg shrink-0">🔗</span>
-          <div class="text-xs text-slate-400 leading-relaxed">
-            <span class="text-slate-300 font-medium">Full traceability preserved.</span>
+          <div class="text-sm text-slate-400 leading-relaxed">
+            <span class="text-slate-300 font-semibold">Full traceability preserved.</span>
             Every event is written to SQLite as it happens. Agent 2 receives only Agent 1's JSON output — never the original client brief, pilot report, or lab notes — preventing context drift.
           </div>
         </div>
