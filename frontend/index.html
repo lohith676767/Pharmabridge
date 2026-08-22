@@ -6,528 +6,724 @@
 <title>PharmaBridge AI — Tech Transfer System</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <style>
-  html{font-size:17px}
+  /* ───────────────────────────────────────────────
+     PharmaBridge — mission-control styling.
+     Near-black ground, hairline rules, wide-tracked
+     uppercase labels, monospace for anything numeric.
+     ─────────────────────────────────────────────── */
+  :root{
+    --bg:#08090b;
+    --panel:#0d0f13;
+    --panel-2:#101319;
+    --line:#1c2029;
+    --line-bright:#2a3040;
+    --txt:#f2f4f7;
+    --txt-2:#9aa3b0;
+    --txt-3:#697180;
+    --accent:#4d9fff;
+    --ok:#3ddc84;
+    --warn:#ffb340;
+    --bad:#ff5c5c;
+  }
+  html{font-size:16px}
   [v-cloak]{display:none}
   *{box-sizing:border-box}
-  body{margin:0}
-  ::-webkit-scrollbar{width:5px;height:5px}
+  body{margin:0;background:var(--bg);color:var(--txt);
+       font-family:'Inter',ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  ::-webkit-scrollbar{width:6px;height:6px}
   ::-webkit-scrollbar-track{background:transparent}
-  ::-webkit-scrollbar-thumb{background:#334155;border-radius:3px}
-  .bar-fill{transition:width .8s cubic-bezier(.4,0,.2,1)}
-  .card{transition:border-color .2s ease, box-shadow .2s ease, transform .15s ease}
-  .card:hover{border-color:#334155;box-shadow:0 8px 24px -8px rgba(0,0,0,.5)}
-  .card-lift:hover{transform:translateY(-2px)}
-  .btn-primary{transition:filter .15s ease, box-shadow .15s ease, transform .1s ease}
-  .btn-primary:hover:not(:disabled){filter:brightness(1.12)}
-  .btn-primary:active:not(:disabled){transform:translateY(1px)}
+  ::-webkit-scrollbar-thumb{background:#242a35;border-radius:0}
+  ::-webkit-scrollbar-thumb:hover{background:#333c4b}
 
-  .bg-glow{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
-  .bg-glow span{position:absolute;border-radius:9999px;filter:blur(90px);opacity:.16}
-  .bg-glow span:nth-child(1){width:32rem;height:32rem;top:-10rem;left:-8rem;background:#3b82f6;animation:drift1 22s ease-in-out infinite}
-  .bg-glow span:nth-child(2){width:26rem;height:26rem;bottom:-8rem;right:-6rem;background:#6366f1;animation:drift2 26s ease-in-out infinite}
-  @keyframes drift1{0%,100%{transform:translate(0,0)}50%{transform:translate(3rem,2rem)}}
-  @keyframes drift2{0%,100%{transform:translate(0,0)}50%{transform:translate(-2.5rem,-2rem)}}
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+  /* The workhorse label style: small, wide-tracked, uppercase. */
+  .lbl{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--txt-3);font-weight:600}
+  .lbl-b{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--txt-2);font-weight:600}
+  .hair{border-color:var(--line)}
 
-  @keyframes fadeInUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-  .fade-in{animation:fadeInUp .45s cubic-bezier(.16,1,.3,1) both}
+  /* ── Panels ── */
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:3px;position:relative}
+  .panel-h{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+  .panel-b{padding:16px}
+  /* Corner ticks — small aerospace-drawing detail, drawn in CSS only. */
+  .ticked::before,.ticked::after{content:"";position:absolute;width:9px;height:9px;pointer-events:none;opacity:.55}
+  .ticked::before{top:-1px;left:-1px;border-top:1px solid var(--accent);border-left:1px solid var(--accent)}
+  .ticked::after{bottom:-1px;right:-1px;border-bottom:1px solid var(--accent);border-right:1px solid var(--accent)}
 
-  @keyframes viewFadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-  .view-anim{animation:viewFadeIn .25s ease both}
+  /* ── Buttons ── */
+  .btn{font-size:11px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;
+       padding:9px 16px;border-radius:2px;border:1px solid var(--line-bright);
+       background:transparent;color:var(--txt-2);cursor:pointer;
+       transition:color .15s,border-color .15s,background .15s,transform .08s;
+       display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+  .btn:hover:not(:disabled){color:var(--txt);border-color:#4a5568;background:#161b23}
+  .btn:active:not(:disabled){transform:translateY(1px)}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn-go{background:var(--accent);border-color:var(--accent);color:#04121f}
+  .btn-go:hover:not(:disabled){background:#6bb0ff;border-color:#6bb0ff;color:#04121f}
+  .btn-xs{font-size:10px;padding:5px 10px;letter-spacing:.1em}
+  .btn-danger:hover:not(:disabled){color:var(--bad);border-color:var(--bad);background:rgba(255,92,92,.07)}
 
-  .toast-enter-active{transition:opacity .25s ease, transform .25s ease}
-  .toast-leave-active{transition:opacity .2s ease, transform .2s ease}
-  .toast-enter-from{opacity:0;transform:translateX(20px)}
-  .toast-leave-to{opacity:0;transform:translateX(20px)}
+  /* ── Inputs ── */
+  .fld{width:100%;background:#0a0c10;border:1px solid var(--line);border-radius:2px;
+       padding:9px 12px;color:var(--txt);font-size:13px;outline:none;
+       transition:border-color .15s,box-shadow .15s}
+  .fld:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(77,159,255,.12)}
+  .fld::placeholder{color:#4e5766}
+  select.fld{cursor:pointer}
 
-  @keyframes modalFadeIn{from{opacity:0}to{opacity:1}}
-  .modal-overlay-anim{animation:modalFadeIn .15s ease both}
-  @keyframes modalPop{from{opacity:0;transform:scale(.97) translateY(6px)}to{opacity:1;transform:none}}
-  .modal-panel-anim{animation:modalPop .2s cubic-bezier(.16,1,.3,1) both}
+  /* ── Status pills ── */
+  .pill{font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+        padding:3px 9px;border-radius:2px;border:1px solid;white-space:nowrap}
+  .p-ok{color:var(--ok);border-color:rgba(61,220,132,.4);background:rgba(61,220,132,.09)}
+  .p-bad{color:var(--bad);border-color:rgba(255,92,92,.4);background:rgba(255,92,92,.09)}
+  .p-warn{color:var(--warn);border-color:rgba(255,179,64,.4);background:rgba(255,179,64,.09)}
+  .p-info{color:var(--accent);border-color:rgba(77,159,255,.4);background:rgba(77,159,255,.09)}
+  .p-mute{color:var(--txt-3);border-color:var(--line-bright);background:#12161d}
 
-  .dropzone{border:1.5px dashed #334155;transition:border-color .15s ease, background-color .15s ease}
-  .dropzone:hover{border-color:#475569;background:rgba(255,255,255,.02)}
-  .dropzone.dragover{border-color:#3b82f6;background:rgba(59,130,246,.06)}
+  /* ── Nav ── */
+  .nav-i{display:flex;align-items:center;gap:12px;padding:11px 14px;cursor:pointer;user-select:none;
+         border-left:2px solid transparent;color:var(--txt-3);
+         font-size:12px;letter-spacing:.11em;text-transform:uppercase;font-weight:600;
+         transition:color .15s,background .15s,border-color .15s}
+  .nav-i:hover{color:var(--txt-2);background:#0f1217}
+  .nav-i.on{color:var(--txt);background:#0f1319;border-left-color:var(--accent)}
+  .nav-i .dot{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.5}
+  .nav-i.on .dot{opacity:1;background:var(--accent);box-shadow:0 0 8px var(--accent)}
 
-  .row-expand-enter-active,.row-expand-leave-active{transition:opacity .15s ease}
-  .row-expand-enter-from,.row-expand-leave-to{opacity:0}
+  /* ── Starfield: three parallax layers, pure CSS. Subtle by design —
+       it should read as depth, not decoration. ── */
+  .stars{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+  .stars i{position:absolute;inset:0;display:block;
+    background-repeat:repeat;opacity:.5}
+  .stars i:nth-child(1){
+    background-image:radial-gradient(1px 1px at 20px 30px,#fff,transparent),
+                     radial-gradient(1px 1px at 130px 80px,#cfe4ff,transparent),
+                     radial-gradient(1px 1px at 210px 150px,#fff,transparent);
+    background-size:280px 280px;animation:pan 240s linear infinite;opacity:.35}
+  .stars i:nth-child(2){
+    background-image:radial-gradient(1px 1px at 60px 120px,#9ec5ff,transparent),
+                     radial-gradient(1px 1px at 180px 40px,#fff,transparent);
+    background-size:420px 420px;animation:pan 400s linear infinite;opacity:.22}
+  .stars i:nth-child(3){
+    background:radial-gradient(900px 500px at 78% -10%,rgba(77,159,255,.12),transparent 70%),
+               radial-gradient(700px 500px at 5% 110%,rgba(120,80,255,.10),transparent 70%);
+    opacity:1;animation:breathe 26s ease-in-out infinite}
+  @keyframes pan{from{background-position:0 0}to{background-position:1000px 1000px}}
+  @keyframes breathe{0%,100%{opacity:.75}50%{opacity:1}}
 
-  /* ══════════ PRESENTATION POLISH ══════════
-     Pure CSS: raises contrast, opens up spacing, adds motion.
-     No markup or script changes, so behaviour is untouched. */
+  /* ── Motion ── */
+  @keyframes rise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+  .rise{animation:rise .4s cubic-bezier(.16,1,.3,1) both}
+  @keyframes viewIn{from{opacity:0}to{opacity:1}}
+  .view-anim{animation:viewIn .22s ease both}
+  @keyframes scan{0%{transform:translateX(-100%)}100%{transform:translateX(320%)}}
+  /* Sweeping light on the active pipeline stage */
+  .scanline{position:absolute;top:0;bottom:0;width:32%;pointer-events:none;
+    background:linear-gradient(90deg,transparent,rgba(77,159,255,.14),transparent);
+    animation:scan 1.9s ease-in-out infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+  .blink{animation:blink 1.3s ease-in-out infinite}
 
-  /* — Contrast: lift every muted grey a step or two for projector/dark-room
-       legibility. Slate-500 body copy is unreadable on a big screen. — */
-  body{color:#e8edf5 !important;letter-spacing:-.005em}
-  .text-slate-500{color:#9fb0c9 !important}
-  .text-slate-400{color:#c2cfe0 !important}
-  .text-slate-300{color:#dce5f0 !important}
-  .text-slate-200{color:#f0f4fa !important}
-  .text-slate-600{color:#8496ae !important}
-  /* Status colours punched up so PASS/BLOCK read instantly from the back row */
-  .text-green-400{color:#4ade80 !important;text-shadow:0 0 18px rgba(74,222,128,.35)}
-  .text-red-400{color:#ff6b6b !important;text-shadow:0 0 18px rgba(255,107,107,.35)}
-  .text-yellow-400{color:#fcd34d !important;text-shadow:0 0 18px rgba(252,211,77,.3)}
-  .text-blue-300,.text-blue-400{color:#7dd3fc !important}
+  .toast-enter-active{transition:opacity .25s,transform .25s}
+  .toast-leave-active{transition:opacity .18s,transform .18s}
+  .toast-enter-from,.toast-leave-to{opacity:0;transform:translateX(16px)}
 
-  /* — Spacing: a little more air between blocks — */
-  main{padding:2.25rem 2.5rem !important}
-  main table td{padding-top:1.05rem !important;padding-bottom:1.05rem !important}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .modal-overlay-anim{animation:fadeIn .14s ease both}
+  @keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .modal-panel-anim{animation:pop .2s cubic-bezier(.16,1,.3,1) both}
 
-  /* — Ambient background: stronger, slowly drifting colour — */
-  .bg-glow span{filter:blur(110px);opacity:.26}
-  .bg-glow span:nth-child(1){background:#2563eb}
-  .bg-glow span:nth-child(2){background:#7c3aed}
+  .dz{border:1px dashed var(--line-bright);border-radius:2px;background:#0a0c10;
+      transition:border-color .15s,background .15s;cursor:pointer;
+      min-height:82px;display:flex;align-items:center;justify-content:center;padding:12px}
+  .dz:hover{border-color:#4a5568;background:#0e1218}
+  .dz.on{border-color:var(--accent);background:rgba(77,159,255,.06)}
 
-  /* — Cards: subtle gradient surface + accent glow on hover — */
-  .card{position:relative;background-image:linear-gradient(160deg,rgba(255,255,255,.035),transparent 55%)}
-  .card:hover{border-color:#3b5a8f !important;
-    box-shadow:0 14px 40px -12px rgba(0,0,0,.7),0 0 0 1px rgba(59,130,246,.18),0 0 34px -8px rgba(59,130,246,.28)}
-  .card-lift{transition:transform .22s cubic-bezier(.16,1,.3,1),box-shadow .22s ease,border-color .22s ease}
-  .card-lift:hover{transform:translateY(-4px)}
-
-  /* Animated accent hairline that sweeps across the top of KPI cards */
-  .card-lift::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;border-radius:1rem 1rem 0 0;
-    background:linear-gradient(90deg,transparent,#3b82f6,#818cf8,transparent);background-size:200% 100%;
-    opacity:0;transition:opacity .25s ease;animation:sweep 3s linear infinite}
-  .card-lift:hover::before{opacity:.95}
-  @keyframes sweep{0%{background-position:200% 0}100%{background-position:-200% 0}}
-
-  /* — Big numbers: gradient fill so the KPIs pop — */
-  .card .text-3xl{background:linear-gradient(180deg,#ffffff,#a9c4ee);-webkit-background-clip:text;
-    background-clip:text;color:transparent;letter-spacing:-.02em}
-
-  /* — Primary button: solid gradient + breathing glow so the CTA is obvious — */
-  .btn-primary.bg-blue-600{background-image:linear-gradient(135deg,#2563eb,#4f46e5);
-    box-shadow:0 8px 22px -6px rgba(37,99,235,.75);animation:cta 2.6s ease-in-out infinite}
-  .btn-primary.bg-blue-600:hover:not(:disabled){box-shadow:0 12px 30px -6px rgba(59,130,246,.95);animation:none}
-  .btn-primary.bg-blue-600:disabled{animation:none}
-  @keyframes cta{0%,100%{box-shadow:0 8px 22px -6px rgba(37,99,235,.55)}
-                 50%{box-shadow:0 8px 30px -4px rgba(59,130,246,.9)}}
-  /* Secondary buttons: clear, visible outline instead of near-invisible grey */
-  .btn-primary.bg-slate-800{border:1px solid #46587a !important;color:#dce5f0 !important}
-  .btn-primary.bg-slate-800:hover{border-color:#6b83ad !important;background:#31415d !important}
-
-  /* — Sidebar nav: glow bar on the active item — */
-  nav>div{transition:background .2s ease,color .2s ease,transform .2s ease,box-shadow .2s ease}
-  nav>div:hover{transform:translateX(3px)}
-  nav>div.bg-blue-600\/15{box-shadow:inset 3px 0 0 #60a5fa,0 0 26px -10px rgba(59,130,246,.65)}
-
-  /* — Inputs: clearer focus ring — */
-  input:focus,textarea:focus,select:focus{box-shadow:0 0 0 3px rgba(59,130,246,.28) !important;
-    border-color:#60a5fa !important}
-
-  /* — Dropzones: more obviously interactive — */
-  .dropzone{border-width:2px;min-height:74px;display:flex;align-items:center;justify-content:center}
-  .dropzone:hover{border-color:#60a5fa;background:rgba(59,130,246,.07);transform:translateY(-1px)}
-  .dropzone.dragover{box-shadow:0 0 26px -6px rgba(59,130,246,.6);transform:scale(1.015)}
-
-  /* — Stepper: pulsing ring on the step that is currently running — */
-  @keyframes ring{0%{box-shadow:0 0 0 0 rgba(59,130,246,.6)}70%{box-shadow:0 0 0 12px rgba(59,130,246,0)}
-                  100%{box-shadow:0 0 0 0 rgba(59,130,246,0)}}
-  .animate-pulse{animation:ring 1.7s cubic-bezier(.4,0,.6,1) infinite !important}
-
-  /* — Table rows: highlight sweep on hover — */
-  main tbody tr{transition:background .18s ease,box-shadow .18s ease}
-  main tbody tr:hover{box-shadow:inset 3px 0 0 #3b82f6}
-
-  /* — Toasts: stronger presence — */
-  .fixed.top-5 .rounded-xl{box-shadow:0 16px 40px -12px rgba(0,0,0,.8);backdrop-filter:blur(14px)}
-
-  /* — Staggered entrance for result cards — */
-  .fade-in{animation-duration:.55s}
+  tbody tr{transition:background .15s,box-shadow .15s}
+  tbody tr:hover{background:#0f1217;box-shadow:inset 2px 0 0 var(--accent)}
 
   @media (prefers-reduced-motion:reduce){
     *,*::before,*::after{animation:none !important;transition-duration:.01ms !important}
   }
 </style>
-<script>tailwind.config={darkMode:'class',theme:{extend:{fontFamily:{sans:['Inter','ui-sans-serif','system-ui','sans-serif']}}}}</script>
 </head>
-<body class="bg-slate-950 text-slate-200 font-sans antialiased">
+<body>
 <div id="app" v-cloak class="flex h-screen overflow-hidden relative">
 
-  <div class="bg-glow"><span></span><span></span></div>
+  <div class="stars"><i></i><i></i><i></i></div>
 
-  <!-- TOASTS -->
-  <div class="fixed top-5 right-5 z-50 flex flex-col gap-2 w-80">
+  <!-- ══════════ TOASTS ══════════ -->
+  <div class="fixed top-4 right-4 z-50 flex flex-col gap-2 w-[330px]">
     <transition-group name="toast">
       <div v-for="t in toasts" :key="t.id"
-        :class="['rounded-xl px-4 py-3 shadow-lg border text-sm font-medium flex items-start gap-2.5 backdrop-blur',
-          t.type==='success' ? 'bg-green-500/10 border-green-500/30 text-green-300'
-          : t.type==='error' ? 'bg-red-500/10 border-red-500/30 text-red-300'
-          : 'bg-blue-500/10 border-blue-500/30 text-blue-300']">
-        <span>{{ t.type==='success' ? '✓' : t.type==='error' ? '✕' : 'ℹ' }}</span>
-        <span class="flex-1 leading-snug">{{ t.message }}</span>
-        <span @click="dismissToast(t.id)" class="cursor-pointer opacity-60 hover:opacity-100">✕</span>
+        class="panel px-4 py-3 flex items-start gap-3 text-[12px]"
+        :style="{borderColor: t.type==='success' ? 'rgba(61,220,132,.45)' : t.type==='error' ? 'rgba(255,92,92,.45)' : 'rgba(77,159,255,.45)',
+                 background:'rgba(13,15,19,.95)', backdropFilter:'blur(12px)'}">
+        <span class="mono text-[11px] mt-px"
+          :style="{color: t.type==='success' ? 'var(--ok)' : t.type==='error' ? 'var(--bad)' : 'var(--accent)'}">
+          {{ t.type==='success' ? '[OK]' : t.type==='error' ? '[!!]' : '[--]' }}
+        </span>
+        <span class="flex-1 leading-snug" style="color:var(--txt-2)">{{ t.message }}</span>
+        <span @click="dismissToast(t.id)" class="cursor-pointer text-[11px]" style="color:var(--txt-3)">✕</span>
       </div>
     </transition-group>
   </div>
 
-  <!-- RUN DETAIL MODAL -->
-    <div v-if="selectedRun" @click.self="selectedRun = null" class="modal-overlay-anim fixed inset-0 z-40 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6">
-        <div class="modal-panel-anim bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl max-h-[85vh] overflow-y-auto shadow-2xl">
-          <div class="sticky top-0 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-6 py-4 flex items-center justify-between">
-            <div>
-              <div class="font-bold text-white text-lg">Run #{{ selectedRun.id }}</div>
-              <div class="text-sm text-slate-500">{{ selectedRun.created_at }}</div>
-            </div>
-            <button @click="selectedRun = null" class="text-slate-400 hover:text-white text-xl leading-none">✕</button>
+  <!-- ══════════ RUN DETAIL MODAL ══════════ -->
+  <div v-if="selectedRun" @click.self="selectedRun = null"
+    class="modal-overlay-anim fixed inset-0 z-40 flex items-center justify-center p-6"
+    style="background:rgba(0,0,0,.75);backdrop-filter:blur(4px)">
+    <div class="modal-panel-anim panel ticked w-full max-w-4xl max-h-[86vh] overflow-y-auto">
+      <div class="panel-h sticky top-0 z-10" style="background:var(--panel)">
+        <div class="flex-1">
+          <div class="lbl">Flight record</div>
+          <div class="mono text-[17px] font-bold mt-1">RUN-{{ String(selectedRun.id).padStart(3,'0') }}</div>
+        </div>
+        <span class="pill" :class="statusPill(selectedRun.status)">{{ selectedRun.status }}</span>
+        <button class="btn btn-xs" @click="exportMarkdown(selectedRun.pm, selectedRun.sa, selectedRun.id)">↓ MD</button>
+        <button class="btn btn-xs" @click="exportJson(selectedRun, 'run-'+selectedRun.id)">↓ JSON</button>
+        <button class="btn btn-xs btn-danger" @click="deleteRun(selectedRun.id)">Delete</button>
+        <button class="btn btn-xs" @click="selectedRun = null">✕</button>
+      </div>
+
+      <div class="panel-b space-y-4">
+        <div class="grid grid-cols-3 gap-3">
+          <div class="panel p-3">
+            <div class="lbl">Logged</div>
+            <div class="mono text-[12px] mt-1.5" style="color:var(--txt-2)">{{ fmtTime(selectedRun.created_at) }}</div>
           </div>
-          <div class="p-6 space-y-4">
-            <div v-if="selectedRun.client_text" class="bg-slate-800/60 border border-slate-800 rounded-xl p-4">
-              <div class="text-sm font-semibold text-slate-400 mb-1.5">Client brief</div>
-              <div class="text-base text-slate-300">{{ selectedRun.client_text }}</div>
-            </div>
-            <div v-if="selectedRun.pm">
-              <div class="flex items-center justify-between mb-2">
-                <div class="font-bold text-white text-base">Agent 1 output</div>
-                <button @click="copyJson(selectedRun.pm)" class="text-xs px-2.5 py-1 rounded-md bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-700">⧉ Copy JSON</button>
-              </div>
-              <pre class="bg-slate-950 border border-slate-800 rounded-xl p-4 text-xs text-slate-400 overflow-x-auto">{{ JSON.stringify(selectedRun.pm, null, 2) }}</pre>
-            </div>
-            <div v-if="selectedRun.sa">
-              <div class="flex items-center justify-between mb-2">
-                <div class="font-bold text-white text-base">Agent 2 output</div>
-                <button @click="copyJson(selectedRun.sa)" class="text-xs px-2.5 py-1 rounded-md bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-700">⧉ Copy JSON</button>
-              </div>
-              <pre class="bg-slate-950 border border-slate-800 rounded-xl p-4 text-xs text-slate-400 overflow-x-auto">{{ JSON.stringify(selectedRun.sa, null, 2) }}</pre>
+          <div class="panel p-3">
+            <div class="lbl">Pilot report</div>
+            <div class="mono text-[12px] mt-1.5 truncate" style="color:var(--txt-2)">{{ selectedRun.pilot_report_filename || '—' }}</div>
+          </div>
+          <div class="panel p-3">
+            <div class="lbl">Lab notes</div>
+            <div class="mono text-[12px] mt-1.5 truncate" style="color:var(--txt-2)">{{ selectedRun.lab_notes_filename || '—' }}</div>
+          </div>
+        </div>
+
+        <div v-if="selectedRun.client_text" class="panel p-4">
+          <div class="lbl mb-2">Client brief</div>
+          <div class="text-[13px] leading-relaxed" style="color:var(--txt-2)">{{ selectedRun.client_text }}</div>
+        </div>
+
+        <div v-if="selectedRun.audit && selectedRun.audit.length" class="panel">
+          <div class="panel-h"><span class="lbl-b flex-1">Event trace</span>
+            <span class="mono text-[11px]" style="color:var(--txt-3)">{{ selectedRun.audit.length }}</span></div>
+          <div class="panel-b space-y-1.5 max-h-56 overflow-y-auto">
+            <div v-for="e in [...selectedRun.audit].reverse()" :key="e.id" class="flex items-start gap-3 text-[12px]">
+              <span class="mono shrink-0" style="color:var(--txt-3)">{{ fmtClock(e.timestamp) }}</span>
+              <span class="pill shrink-0" :class="statusPill(e.status)" style="font-size:9px">{{ e.status }}</span>
+              <span class="shrink-0 mono" style="color:var(--accent)">{{ e.agent }}</span>
+              <span class="flex-1" style="color:var(--txt-2)">{{ e.event }}</span>
             </div>
           </div>
         </div>
-    </div>
 
-  <!-- SIDEBAR -->
-  <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 relative z-10">
-    <div class="p-5 border-b border-slate-800">
+        <div v-if="selectedRun.pm">
+          <div class="flex items-center gap-3 mb-2">
+            <span class="lbl-b flex-1">Agent 1 — process knowledge package</span>
+            <button class="btn btn-xs" @click="copyJson(selectedRun.pm)">Copy</button>
+          </div>
+          <pre class="panel p-4 mono text-[11px] overflow-x-auto leading-relaxed" style="color:var(--txt-2)">{{ JSON.stringify(selectedRun.pm, null, 2) }}</pre>
+        </div>
+
+        <div v-if="selectedRun.sa">
+          <div class="flex items-center gap-3 mb-2">
+            <span class="lbl-b flex-1">Agent 2 — manufacturing design</span>
+            <button class="btn btn-xs" @click="copyJson(selectedRun.sa)">Copy</button>
+          </div>
+          <pre class="panel p-4 mono text-[11px] overflow-x-auto leading-relaxed" style="color:var(--txt-2)">{{ JSON.stringify(selectedRun.sa, null, 2) }}</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ SIDEBAR ══════════ -->
+  <aside class="w-[236px] shrink-0 flex flex-col relative z-10"
+         style="background:#0a0c10;border-right:1px solid var(--line)">
+    <div class="px-5 py-5" style="border-bottom:1px solid var(--line)">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-950/50 flex items-center justify-center font-bold text-white text-base">Pb</div>
-        <div>
-          <div class="font-bold text-white text-base leading-tight tracking-tight">PharmaBridge AI</div>
-          <div class="text-sm text-slate-500">Tech Transfer OS</div>
+        <div class="w-9 h-9 flex items-center justify-center mono font-bold text-[13px] shrink-0"
+             style="border:1px solid var(--accent);color:var(--accent);border-radius:2px">Pb</div>
+        <div class="min-w-0">
+          <div class="text-[13px] font-semibold tracking-wide">PHARMABRIDGE</div>
+          <div class="lbl mt-0.5">Tech transfer OS</div>
         </div>
       </div>
     </div>
 
-    <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
-      <div v-for="item in navItems" :key="item.id"
-        @click="activeView = item.id"
-        :class="['flex items-center gap-3 px-3.5 py-3 rounded-xl cursor-pointer select-none transition-all text-base border-l-2',
-          activeView === item.id
-            ? 'bg-blue-600/15 text-blue-300 border-blue-500'
-            : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-200 hover:translate-x-0.5 border-transparent']">
-        <span class="text-lg w-5 text-center">{{ item.icon }}</span>
-        <span class="font-medium flex-1">{{ item.label }}</span>
+    <nav class="flex-1 py-3 overflow-y-auto">
+      <div class="lbl px-5 pb-2">Stations</div>
+      <div v-for="item in navItems" :key="item.id" @click="activeView = item.id"
+        :class="['nav-i', activeView === item.id ? 'on' : '']">
+        <span class="dot"></span>
+        <span class="flex-1">{{ item.label }}</span>
+        <span v-if="item.id==='dashboard' && stats.total_runs" class="mono text-[10px]" style="color:var(--txt-3)">{{ stats.total_runs }}</span>
+        <span v-if="item.id==='audit' && stats.audit_entries" class="mono text-[10px]" style="color:var(--txt-3)">{{ stats.audit_entries }}</span>
       </div>
     </nav>
 
-    <div class="p-4 border-t border-slate-800 space-y-2.5">
-      <div class="flex items-center gap-2">
-        <div :class="['w-2 h-2 rounded-full shrink-0', apiOnline ? 'bg-green-500 shadow shadow-green-500/50' : 'bg-red-500 shadow shadow-red-500/50']"></div>
-        <span class="text-sm text-slate-400">{{ apiOnline ? 'API connected' : 'API unreachable' }}</span>
+    <!-- Live telemetry strip: real values, not decoration -->
+    <div class="px-5 py-4 space-y-2.5" style="border-top:1px solid var(--line)">
+      <div class="lbl">Telemetry</div>
+      <div class="flex items-center justify-between text-[11px]">
+        <span style="color:var(--txt-3)">API</span>
+        <span class="mono flex items-center gap-1.5" :style="{color: apiOnline ? 'var(--ok)' : 'var(--bad)'}">
+          <span class="w-1.5 h-1.5 rounded-full" :class="apiOnline ? '' : 'blink'"
+                :style="{background:'currentColor',boxShadow:'0 0 7px currentColor'}"></span>
+          {{ apiOnline ? 'LINKED' : 'NO LINK' }}
+        </span>
       </div>
-      <div class="text-xs text-slate-600">Rockathon'26 — PS2 · SSNCE</div>
+      <div class="flex items-center justify-between text-[11px]">
+        <span style="color:var(--txt-3)">Agent 1</span>
+        <span class="mono" :style="{color: a1.key ? 'var(--ok)' : 'var(--txt-3)'}">{{ a1.key ? 'ARMED' : 'STANDBY' }}</span>
+      </div>
+      <div class="flex items-center justify-between text-[11px]">
+        <span style="color:var(--txt-3)">Agent 2</span>
+        <span class="mono" :style="{color: a2.key ? 'var(--ok)' : 'var(--txt-3)'}">{{ a2.key ? 'ARMED' : 'STANDBY' }}</span>
+      </div>
+      <div class="flex items-center justify-between text-[11px]">
+        <span style="color:var(--txt-3)">Pipeline</span>
+        <span class="mono" :style="{color: running ? 'var(--accent)' : 'var(--txt-3)'}">
+          {{ running ? 'RUNNING ' + elapsed + 's' : 'IDLE' }}
+        </span>
+      </div>
+      <div class="lbl pt-1" style="opacity:.6">Rockathon'26 · PS2 · SSNCE</div>
     </div>
   </aside>
 
-  <!-- MAIN -->
+  <!-- ══════════ MAIN ══════════ -->
   <div class="flex-1 flex flex-col overflow-hidden relative z-10">
-    <header class="shrink-0 bg-slate-950/90 backdrop-blur border-b border-slate-800 px-8 py-5 flex items-center justify-between">
+    <header class="shrink-0 px-8 py-5 flex items-center justify-between"
+            style="border-bottom:1px solid var(--line);background:rgba(8,9,11,.85);backdrop-filter:blur(10px)">
       <div>
-        <h1 class="text-xl font-bold text-white tracking-tight">{{ currentNav.label }}</h1>
-        <p class="text-sm text-slate-500 mt-0.5">{{ currentNav.description }}</p>
+        <div class="lbl">{{ currentNav.description }}</div>
+        <h1 class="text-[22px] font-semibold tracking-tight mt-1">{{ currentNav.label }}</h1>
       </div>
-      <div :class="['text-sm px-3.5 py-1.5 rounded-full font-semibold border transition-colors',
-        stats.pass_rate >= 80 ? 'bg-green-500/10 text-green-400 border-green-500/20'
-        : stats.pass_rate >= 50 ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
-        : 'bg-red-500/10 text-red-400 border-red-500/20']">
-        Pass rate {{ stats.pass_rate }}%
+      <div class="flex items-stretch gap-3">
+        <div class="px-4 py-2 text-right" style="border-left:1px solid var(--line)">
+          <div class="lbl">Handoff pass rate</div>
+          <div class="mono text-[19px] font-bold mt-0.5"
+               :style="{color: stats.pass_rate>=70 ? 'var(--ok)' : stats.pass_rate>=40 ? 'var(--warn)' : 'var(--bad)'}">
+            {{ stats.pass_rate }}<span class="text-[12px]">%</span>
+          </div>
+        </div>
+        <div class="px-4 py-2 text-right" style="border-left:1px solid var(--line)">
+          <div class="lbl">Runs logged</div>
+          <div class="mono text-[19px] font-bold mt-0.5">{{ stats.total_runs }}</div>
+        </div>
       </div>
     </header>
 
-    <main class="flex-1 overflow-y-auto p-8">
+    <main class="flex-1 overflow-y-auto px-8 py-7">
 
-      <!-- ═══════════ DASHBOARD ═══════════ -->
+      <!-- ══════════ DASHBOARD ══════════ -->
       <div v-if="activeView === 'dashboard'" key="dashboard" class="view-anim">
-        <div class="grid grid-cols-4 gap-4 mb-8">
-          <div class="card card-lift fade-in bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm" style="animation-delay:0ms">
-            <div class="w-11 h-11 rounded-xl bg-blue-500/10 flex items-center justify-center text-xl mb-3">🧪</div>
-            <div class="text-3xl font-bold text-white mb-0.5 tracking-tight">{{ stats.total_runs }}</div>
-            <div class="text-sm text-slate-500">Total pipeline runs</div>
-          </div>
-          <div class="card card-lift fade-in bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm" style="animation-delay:60ms">
-            <div class="w-11 h-11 rounded-xl bg-green-500/10 flex items-center justify-center text-xl mb-3">✅</div>
-            <div class="text-3xl font-bold text-white mb-0.5 tracking-tight">{{ stats.passed }}</div>
-            <div class="text-sm text-slate-500">Handoffs passed</div>
-          </div>
-          <div class="card card-lift fade-in bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm" style="animation-delay:120ms">
-            <div class="w-11 h-11 rounded-xl bg-red-500/10 flex items-center justify-center text-xl mb-3">🚫</div>
-            <div class="text-3xl font-bold text-white mb-0.5 tracking-tight">{{ stats.blocked }}</div>
-            <div class="text-sm text-slate-500">Handoffs blocked</div>
-          </div>
-          <div class="card card-lift fade-in bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm" style="animation-delay:180ms">
-            <div class="w-11 h-11 rounded-xl bg-indigo-500/10 flex items-center justify-center text-xl mb-3">📋</div>
-            <div class="text-3xl font-bold text-white mb-0.5 tracking-tight">{{ stats.audit_entries }}</div>
-            <div class="text-sm text-slate-500">Audit log entries</div>
+
+        <div class="grid grid-cols-4 gap-3 mb-6">
+          <div v-for="(k,i) in kpis" :key="k.label" class="panel ticked p-4 rise" :style="{animationDelay: (i*55)+'ms'}">
+            <div class="flex items-start justify-between">
+              <div class="lbl">{{ k.label }}</div>
+              <span class="w-1.5 h-1.5 rounded-full mt-1" :style="{background:k.color,boxShadow:'0 0 8px '+k.color}"></span>
+            </div>
+            <div class="mono text-[30px] font-bold mt-2 leading-none">{{ k.value }}</div>
+            <div class="lbl mt-2" style="opacity:.75">{{ k.sub }}</div>
           </div>
         </div>
 
-        <div class="fade-in bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm" style="animation-delay:240ms">
-          <div class="flex items-center justify-between mb-5">
-            <div class="font-bold text-white text-base tracking-tight">Recent runs</div>
-            <button @click="activeView='pipeline'" class="btn-primary text-sm font-semibold px-4 py-2 rounded-lg bg-blue-600 text-white shadow-md shadow-blue-950/40">+ New run</button>
+        <div class="panel rise" style="animation-delay:200ms">
+          <div class="panel-h">
+            <span class="lbl-b flex-1">Run history</span>
+            <input v-model="runSearch" class="fld mono" placeholder="filter…" style="width:180px;font-size:11px;padding:6px 10px" />
+            <button class="btn btn-xs" @click="loadDashboard()">↻ Refresh</button>
+            <button class="btn btn-xs btn-go" @click="activeView='pipeline'">+ New run</button>
           </div>
-          <div v-if="runs.length === 0" class="text-base text-slate-500 py-10 text-center">No runs yet — start one from the Pipeline tab.</div>
-          <div v-for="r in runs" :key="r.id" @click="openRun(r.id)"
-            class="flex items-center justify-between py-3.5 border-b border-slate-800/50 last:border-0 cursor-pointer hover:bg-slate-800/30 rounded-lg px-2 -mx-2 transition-colors">
-            <div>
-              <div class="text-base text-slate-200 font-medium">Run #{{ r.id }} — {{ (r.client_text || '(no brief text)').slice(0,70) }}{{ r.client_text && r.client_text.length>70 ? '…' : '' }}</div>
-              <div class="text-sm text-slate-500 mt-0.5">{{ r.created_at }} · {{ r.parameter_count }} parameter(s) · confidence: {{ r.confidence || '—' }}</div>
+
+          <div v-if="filteredRuns.length === 0" class="panel-b text-center py-14">
+            <div class="mono text-[12px]" style="color:var(--txt-3)">
+              {{ runs.length === 0 ? 'NO RUNS LOGGED — START ONE FROM RUN PIPELINE' : 'NO RUNS MATCH FILTER' }}
             </div>
-            <span :class="['text-sm px-3 py-1 rounded-full font-semibold whitespace-nowrap',
-              r.status==='PASSED'?'bg-green-500/15 text-green-400'
-              :r.status==='BLOCKED'?'bg-red-500/15 text-red-400'
-              :r.status==='ERROR'?'bg-red-500/15 text-red-400'
-              :'bg-yellow-500/15 text-yellow-400']">{{ r.status }}</span>
           </div>
+
+          <table v-else class="w-full">
+            <thead>
+              <tr style="border-bottom:1px solid var(--line)">
+                <th class="text-left px-4 py-2.5 lbl">ID</th>
+                <th class="text-left px-4 py-2.5 lbl">Brief</th>
+                <th class="text-left px-4 py-2.5 lbl">Logged</th>
+                <th class="text-left px-4 py-2.5 lbl">Params</th>
+                <th class="text-left px-4 py-2.5 lbl">Conf.</th>
+                <th class="text-left px-4 py-2.5 lbl">Dur.</th>
+                <th class="text-left px-4 py-2.5 lbl">Status</th>
+                <th class="text-right px-4 py-2.5 lbl">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="r in filteredRuns" :key="r.id" style="border-bottom:1px solid var(--line)">
+                <td class="px-4 py-3 mono text-[12px] font-bold" style="color:var(--accent)">{{ String(r.id).padStart(3,'0') }}</td>
+                <td class="px-4 py-3 text-[12.5px] max-w-[280px] truncate" style="color:var(--txt-2)">{{ r.client_text || '(files only)' }}</td>
+                <td class="px-4 py-3 mono text-[11px]" style="color:var(--txt-3)">{{ fmtTime(r.created_at) }}</td>
+                <td class="px-4 py-3 mono text-[12px]">{{ r.parameter_count }}</td>
+                <td class="px-4 py-3 mono text-[11px]" style="color:var(--txt-2)">{{ r.confidence || '—' }}</td>
+                <td class="px-4 py-3 mono text-[11px]" style="color:var(--txt-3)">{{ r.duration_s != null ? r.duration_s+'s' : '—' }}</td>
+                <td class="px-4 py-3"><span class="pill" :class="statusPill(r.status)">{{ r.status }}</span></td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-1.5 justify-end">
+                    <button class="btn btn-xs" @click="openRun(r.id)" title="Open full record">View</button>
+                    <button class="btn btn-xs" @click="reuseRun(r)" title="Load this brief back into the pipeline">Reuse</button>
+                    <button class="btn btn-xs btn-danger" @click="deleteRun(r.id)" title="Delete permanently">Del</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <!-- ═══════════ PIPELINE ═══════════ -->
+      <!-- ══════════ PIPELINE ══════════ -->
       <div v-else-if="activeView === 'pipeline'" key="pipeline" class="view-anim">
 
         <!-- Agent config -->
-        <div class="grid grid-cols-2 gap-5 mb-6">
-          <div class="card fade-in bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
-            <div class="font-bold text-white text-base mb-4 flex items-center gap-2"><span class="text-lg">🧠</span> Agent 1 — Product Manager</div>
-            <label class="text-sm text-slate-500 font-medium">API key</label>
-            <input v-model="a1.key" @blur="refreshModels('a1')" type="password" placeholder="sk-..." class="w-full mb-3.5 mt-1.5 text-base bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40" />
-            <label class="text-sm text-slate-500 font-medium">Model <span v-if="a1.live" class="text-green-400">(live catalog)</span><span v-else class="text-yellow-400">(fallback list — check endpoint/key)</span></label>
-            <input v-model="a1.model" list="a1-models" placeholder="type or pick a model id"
-              class="w-full mb-3.5 mt-1.5 text-base bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40" />
-            <datalist id="a1-models">
-              <option v-for="m in a1.models" :key="m" :value="m"></option>
-            </datalist>
-            <label class="text-sm text-slate-500 font-medium">Endpoint (OpenAI-compatible)</label>
-            <input v-model="a1.base_url" @blur="refreshModels('a1')" class="w-full mt-1.5 text-base bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40" />
-          </div>
-          <div class="card fade-in bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm" style="animation-delay:60ms">
-            <div class="font-bold text-white text-base mb-4 flex items-center gap-2"><span class="text-lg">⚙</span> Agent 2 — Solution Architect</div>
-            <label class="text-sm text-slate-500 font-medium">API key</label>
-            <input v-model="a2.key" @blur="refreshModels('a2')" type="password" placeholder="sk-..." class="w-full mb-3.5 mt-1.5 text-base bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40" />
-            <label class="text-sm text-slate-500 font-medium">Model <span v-if="a2.live" class="text-green-400">(live catalog)</span><span v-else class="text-yellow-400">(fallback list — check endpoint/key)</span></label>
-            <input v-model="a2.model" list="a2-models" placeholder="type or pick a model id"
-              class="w-full mb-3.5 mt-1.5 text-base bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40" />
-            <datalist id="a2-models">
-              <option v-for="m in a2.models" :key="m" :value="m"></option>
-            </datalist>
-            <label class="text-sm text-slate-500 font-medium">Endpoint (OpenAI-compatible)</label>
-            <input v-model="a2.base_url" @blur="refreshModels('a2')" class="w-full mt-1.5 text-base bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40" />
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div v-for="cfg in [{k:'a1',n:'Agent 1',r:'Product Manager',d:'Extracts structured process knowledge from raw client input'},
+                              {k:'a2',n:'Agent 2',r:'Solution Architect',d:'Builds the manufacturing design from Agent 1 JSON only'}]"
+               :key="cfg.k" class="panel ticked rise">
+            <div class="panel-h">
+              <span class="mono text-[11px] font-bold" style="color:var(--accent)">{{ cfg.n.toUpperCase().replace(' ','-') }}</span>
+              <span class="lbl-b flex-1">{{ cfg.r }}</span>
+              <span class="pill" :class="this[cfg.k].key ? 'p-ok' : 'p-mute'">{{ this[cfg.k].key ? 'Armed' : 'Standby' }}</span>
+            </div>
+            <div class="panel-b space-y-3">
+              <p class="text-[11.5px] leading-relaxed" style="color:var(--txt-3)">{{ cfg.d }}</p>
+              <div>
+                <div class="lbl mb-1.5">API key</div>
+                <input v-model="this[cfg.k].key" @blur="refreshModels(cfg.k)" type="password" placeholder="sk-…" class="fld mono" />
+              </div>
+              <div>
+                <div class="lbl mb-1.5 flex items-center gap-2">
+                  <span>Model</span>
+                  <span class="mono" style="font-size:9px" :style="{color: this[cfg.k].live ? 'var(--ok)' : 'var(--warn)'}">
+                    {{ this[cfg.k].live ? '● LIVE CATALOG' : '● FALLBACK LIST' }}
+                  </span>
+                </div>
+                <input v-model="this[cfg.k].model" :list="cfg.k+'-models'" placeholder="model id" class="fld mono" />
+                <datalist :id="cfg.k+'-models'">
+                  <option v-for="m in this[cfg.k].models" :key="m" :value="m"></option>
+                </datalist>
+              </div>
+              <div>
+                <div class="lbl mb-1.5">Endpoint</div>
+                <input v-model="this[cfg.k].base_url" @blur="refreshModels(cfg.k)" class="fld mono" style="font-size:11px" />
+              </div>
+            </div>
           </div>
         </div>
 
         <!-- Inputs -->
-        <div class="card fade-in bg-slate-900 border border-slate-800 rounded-2xl p-5 mb-6 shadow-sm" style="animation-delay:120ms">
-          <div class="font-bold text-white text-base mb-4">Agent 1 inputs</div>
-          <div class="grid grid-cols-3 gap-5">
-            <div>
-              <label class="text-sm text-slate-500 font-medium">1. Pilot report (.pdf)</label>
-              <div class="dropzone rounded-xl p-4 mt-1.5 text-center cursor-pointer" :class="{dragover: dragState.pilot}"
-                @click="$refs.pilotInput.click()"
-                @dragover.prevent="dragState.pilot = true" @dragleave.prevent="dragState.pilot = false"
-                @drop.prevent="dragState.pilot = false; onDropFile($event, 'pilotReportFile')">
-                <input ref="pilotInput" type="file" accept=".pdf" class="hidden" @change="e => pilotReportFile = e.target.files[0] || null" />
-                <div v-if="!pilotReportFile" class="text-sm text-slate-500">📄 Drop PDF or click to browse</div>
-                <div v-else class="flex items-center justify-between gap-2 text-sm">
-                  <span class="text-slate-300 truncate">📄 {{ pilotReportFile.name }}</span>
-                  <span @click.stop="pilotReportFile = null" class="text-slate-500 hover:text-red-400 shrink-0">✕</span>
-                </div>
-              </div>
-            </div>
-            <div>
-              <label class="text-sm text-slate-500 font-medium">2. Lab notes / ELN export (.pdf, .jpg, .png, .txt, .csv)</label>
-              <div class="dropzone rounded-xl p-4 mt-1.5 text-center cursor-pointer" :class="{dragover: dragState.lab}"
-                @click="$refs.labInput.click()"
-                @dragover.prevent="dragState.lab = true" @dragleave.prevent="dragState.lab = false"
-                @drop.prevent="dragState.lab = false; onDropFile($event, 'labNotesFile')">
-                <input ref="labInput" type="file" accept=".pdf,.jpg,.jpeg,.png,.txt,.csv" class="hidden" @change="e => labNotesFile = e.target.files[0] || null" />
-                <div v-if="!labNotesFile" class="text-sm text-slate-500">🧪 Drop file or click to browse</div>
-                <div v-else class="flex items-center justify-between gap-2 text-sm">
-                  <span class="text-slate-300 truncate">🧪 {{ labNotesFile.name }}</span>
-                  <span @click.stop="labNotesFile = null" class="text-slate-500 hover:text-red-400 shrink-0">✕</span>
-                </div>
-              </div>
-            </div>
-            <div>
-              <label class="text-sm text-slate-500 font-medium">3. Vague client text</label>
-              <textarea v-model="clientText" rows="3" placeholder="Transfer our pilot-scale process to mass production..."
-                class="w-full mt-1.5 text-base bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40 resize-none"></textarea>
-            </div>
+        <div class="panel ticked mb-4 rise" style="animation-delay:80ms">
+          <div class="panel-h">
+            <span class="lbl-b flex-1">Agent 1 inputs</span>
+            <span class="mono text-[10px]" style="color:var(--txt-3)">{{ inputCount }}/3 SUPPLIED</span>
+            <button class="btn btn-xs" @click="loadSample()" title="Fill in a known-good worked example">Load sample</button>
           </div>
-          <div class="flex items-center gap-3 mt-5">
-            <button @click="runPipeline" :disabled="running"
-              class="btn-primary text-base font-semibold px-6 py-3 rounded-xl bg-blue-600 text-white shadow-md shadow-blue-950/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-              <span v-if="running" class="animate-spin">⏳</span>▶ {{ running ? 'Running pipeline...' : 'Run pipeline' }}
-            </button>
-            <button @click="resetPipeline" class="btn-primary text-base font-medium px-5 py-3 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700">↺ Reset</button>
-            <span v-if="runError" class="text-sm text-red-400 font-medium">{{ runError }}</span>
+          <div class="panel-b">
+            <div class="grid grid-cols-3 gap-4">
+              <div>
+                <div class="lbl mb-2">01 · Pilot report <span style="opacity:.6">.pdf</span></div>
+                <div class="dz" :class="{on: dragState.pilot}" @click="$refs.pilotInput.click()"
+                  @dragover.prevent="dragState.pilot = true" @dragleave.prevent="dragState.pilot = false"
+                  @drop.prevent="dragState.pilot = false; onDropFile($event, 'pilotReportFile')">
+                  <input ref="pilotInput" type="file" accept=".pdf" class="hidden" @change="e => pilotReportFile = e.target.files[0] || null" />
+                  <div v-if="!pilotReportFile" class="text-center">
+                    <div class="mono text-[11px]" style="color:var(--txt-3)">DROP PDF</div>
+                    <div class="lbl mt-1" style="opacity:.6">or click to browse</div>
+                  </div>
+                  <div v-else class="flex items-center gap-2 w-full">
+                    <span class="mono text-[11px] truncate flex-1" style="color:var(--ok)">✓ {{ pilotReportFile.name }}</span>
+                    <span @click.stop="pilotReportFile = null" class="btn btn-xs" style="padding:3px 7px">✕</span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div class="lbl mb-2">02 · Lab notes / ELN <span style="opacity:.6">.pdf .jpg .png .txt .csv</span></div>
+                <div class="dz" :class="{on: dragState.lab}" @click="$refs.labInput.click()"
+                  @dragover.prevent="dragState.lab = true" @dragleave.prevent="dragState.lab = false"
+                  @drop.prevent="dragState.lab = false; onDropFile($event, 'labNotesFile')">
+                  <input ref="labInput" type="file" accept=".pdf,.jpg,.jpeg,.png,.txt,.csv" class="hidden" @change="e => labNotesFile = e.target.files[0] || null" />
+                  <div v-if="!labNotesFile" class="text-center">
+                    <div class="mono text-[11px]" style="color:var(--txt-3)">DROP FILE</div>
+                    <div class="lbl mt-1" style="opacity:.6">or click to browse</div>
+                  </div>
+                  <div v-else class="flex items-center gap-2 w-full">
+                    <span class="mono text-[11px] truncate flex-1" style="color:var(--ok)">✓ {{ labNotesFile.name }}</span>
+                    <span @click.stop="labNotesFile = null" class="btn btn-xs" style="padding:3px 7px">✕</span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div class="lbl mb-2">03 · Client brief <span style="opacity:.6">free text</span></div>
+                <textarea v-model="clientText" rows="3" class="fld" style="resize:none;height:82px"
+                  placeholder="Transfer our pilot-scale process to mass production…"></textarea>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2.5 mt-4 pt-4" style="border-top:1px solid var(--line)">
+              <button class="btn btn-go" @click="runPipeline" :disabled="running">
+                <span v-if="running" class="blink">◉</span><span v-else>▶</span>
+                {{ running ? 'Running · ' + elapsed + 's' : 'Execute pipeline' }}
+              </button>
+              <button class="btn" @click="resetPipeline" :disabled="running">↺ Reset</button>
+              <button class="btn" @click="clearInputs" :disabled="running" title="Clear all three inputs">Clear inputs</button>
+              <span v-if="runError" class="mono text-[11px] ml-2" style="color:var(--bad)">{{ runError }}</span>
+            </div>
           </div>
         </div>
 
-        <!-- Progress stepper -->
-        <div v-if="running || pm" class="card fade-in bg-slate-900 border border-slate-800 rounded-2xl px-6 py-5 mb-6 shadow-sm">
-          <div class="flex items-center">
-            <template v-for="(s,i) in steps" :key="s">
-              <div class="flex flex-col items-center gap-2 shrink-0">
-                <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all"
-                  :class="i < stepIdx ? 'bg-blue-600 border-blue-600 text-white' : i === stepIdx ? 'border-blue-500 text-blue-400 bg-blue-500/10 animate-pulse' : 'border-slate-700 text-slate-600'">
-                  <span v-if="i < stepIdx">✓</span><span v-else>{{ i + 1 }}</span>
+        <!-- Stage tracker -->
+        <div v-if="running || pm" class="panel mb-4 overflow-hidden rise">
+          <div class="panel-b relative" style="padding:18px 20px">
+            <div v-if="running" class="scanline"></div>
+            <div class="flex items-center">
+              <template v-for="(s,i) in steps" :key="s">
+                <div class="flex flex-col items-center gap-2 shrink-0" style="min-width:88px">
+                  <div class="w-8 h-8 flex items-center justify-center mono text-[11px] font-bold"
+                    :style="{borderRadius:'2px',
+                             border:'1px solid ' + (i < stepIdx ? 'var(--ok)' : i === stepIdx ? 'var(--accent)' : 'var(--line-bright)'),
+                             color:   i < stepIdx ? 'var(--ok)' : i === stepIdx ? 'var(--accent)' : 'var(--txt-3)',
+                             background: i <= stepIdx ? 'rgba(77,159,255,.06)' : 'transparent',
+                             boxShadow: i === stepIdx && running ? '0 0 14px rgba(77,159,255,.5)' : 'none'}"
+                    :class="i === stepIdx && running ? 'blink' : ''">
+                    {{ i < stepIdx ? '✓' : String(i+1).padStart(2,'0') }}
+                  </div>
+                  <span class="lbl text-center" :style="{color: i <= stepIdx ? 'var(--txt-2)' : 'var(--txt-3)'}">{{ s }}</span>
                 </div>
-                <span class="text-sm font-medium whitespace-nowrap" :class="i <= stepIdx ? 'text-blue-300' : 'text-slate-600'">{{ s }}</span>
-              </div>
-              <div v-if="i < steps.length - 1" class="flex-1 h-0.5 mx-3 rounded overflow-hidden bg-slate-800">
-                <div class="bar-fill h-full bg-blue-600" :style="{width: i < stepIdx ? '100%' : '0%'}"></div>
-              </div>
-            </template>
+                <div v-if="i < steps.length - 1" class="flex-1 h-px mx-1"
+                     :style="{background: i < stepIdx ? 'var(--ok)' : 'var(--line-bright)'}"></div>
+              </template>
+            </div>
           </div>
         </div>
 
-        <!-- Results -->
-        <div v-if="pm || sa" class="grid grid-cols-2 gap-6">
-          <div class="card fade-in bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
-            <div class="flex items-center justify-between mb-3.5">
-              <div class="font-bold text-white text-base">Agent 1 — Product Manager</div>
-              <button v-if="pm" @click="copyJson(pm)" class="text-xs px-2.5 py-1 rounded-md bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-700">⧉ Copy JSON</button>
+        <!-- Results: Agent 1 │ Validation gate │ Agent 2 -->
+        <div v-if="pm || sa" class="grid gap-4" style="grid-template-columns:1fr 260px 1fr">
+
+          <!-- AGENT 1 -->
+          <div class="panel ticked rise">
+            <div class="panel-h">
+              <span class="mono text-[11px] font-bold" style="color:var(--accent)">AGENT-1</span>
+              <span class="lbl-b flex-1">Knowledge package</span>
+              <button v-if="pm" class="btn btn-xs" @click="copyJson(pm)">Copy</button>
             </div>
-            <div v-if="pm">
-              <span :class="['text-sm px-3 py-1 rounded-full font-semibold',
-                pm.confidence==='Complete'?'bg-green-500/15 text-green-400'
-                :pm.confidence==='Partial'?'bg-yellow-500/15 text-yellow-400'
-                :'bg-red-500/15 text-red-400']">{{ pm.confidence }}</span>
-              <p class="text-base text-slate-300 mt-3.5 leading-relaxed">{{ pm.requirement_summary }}</p>
-              <div v-for="(p,i) in pm.parameters" :key="i" class="bg-slate-800/60 border border-slate-800 rounded-xl p-3.5 mt-3.5">
-                <div class="flex justify-between items-start mb-2.5">
-                  <span class="text-base font-semibold text-slate-200">{{ p.name }}</span>
-                  <span :class="['text-sm px-2.5 py-0.5 rounded-full font-medium',
-                    p.criticality==='High'?'bg-red-500/15 text-red-400'
-                    :p.criticality==='Medium'?'bg-yellow-500/15 text-yellow-400'
-                    :p.criticality==='Low'?'bg-green-500/15 text-green-400'
-                    :'bg-red-500/15 text-red-400']">{{ p.criticality || 'Missing' }}</span>
-                </div>
-                <div class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm text-slate-400">
-                  <div>Value: <span class="text-slate-300">{{ p.value || '⚠ Missing' }}</span></div>
-                  <div>Range: <span class="text-slate-300">{{ p.validated_range || '⚠ Missing' }}</span></div>
-                  <div>Scale sens.: <span class="text-slate-300">{{ p.scale_sensitivity || '⚠ Missing' }}</span></div>
-                  <div>Evidence: <span class="text-slate-300">{{ p.evidence_source || '⚠ Missing' }}</span></div>
-                </div>
-                <div v-if="p.uncertainty" class="text-sm text-yellow-400 mt-2.5">⚠ {{ p.uncertainty }}</div>
+            <div class="panel-b" v-if="pm">
+              <div class="flex items-center gap-2 mb-3">
+                <span class="lbl">Confidence</span>
+                <span class="pill" :class="pm.confidence==='Complete'?'p-ok':pm.confidence==='Partial'?'p-warn':'p-bad'">{{ pm.confidence }}</span>
+                <span class="mono text-[10px] ml-auto" style="color:var(--txt-3)">{{ (pm.parameters||[]).length }} PARAMS</span>
               </div>
-              <div v-if="pm.open_questions && pm.open_questions.length" class="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3.5 mt-3.5">
-                <div class="text-sm font-semibold text-yellow-400 mb-1.5">⚠ Clarification required</div>
-                <div v-for="(q,i) in pm.open_questions" :key="i" class="text-sm text-yellow-400">• {{ q }}</div>
+              <p class="text-[12.5px] leading-relaxed mb-3" style="color:var(--txt-2)">{{ pm.requirement_summary }}</p>
+
+              <div v-for="(p,i) in pm.parameters" :key="i" class="panel p-3 mb-2" style="background:var(--panel-2)">
+                <div class="flex justify-between items-start gap-2 mb-2">
+                  <span class="text-[13px] font-semibold">{{ p.name }}</span>
+                  <span class="pill" :class="p.criticality==='High'?'p-bad':p.criticality==='Medium'?'p-warn':p.criticality==='Low'?'p-ok':'p-bad'">
+                    {{ p.criticality || 'No criticality' }}
+                  </span>
+                </div>
+                <div class="grid grid-cols-2 gap-x-4 gap-y-1 mono text-[11px]">
+                  <div><span style="color:var(--txt-3)">VAL </span><span :style="{color: p.value?'var(--txt-2)':'var(--bad)'}">{{ p.value || 'MISSING' }}</span></div>
+                  <div><span style="color:var(--txt-3)">RNG </span><span :style="{color: p.validated_range?'var(--txt-2)':'var(--bad)'}">{{ p.validated_range || 'MISSING' }}</span></div>
+                  <div><span style="color:var(--txt-3)">SCL </span><span :style="{color: p.scale_sensitivity?'var(--txt-2)':'var(--bad)'}">{{ p.scale_sensitivity || 'MISSING' }}</span></div>
+                  <div><span style="color:var(--txt-3)">SRC </span><span :style="{color: p.evidence_source?'var(--txt-2)':'var(--bad)'}">{{ p.evidence_source || 'MISSING' }}</span></div>
+                </div>
+                <div v-if="p.quality_impact" class="text-[11.5px] mt-2 pt-2 leading-relaxed" style="border-top:1px solid var(--line);color:var(--txt-3)">
+                  {{ p.quality_impact }}
+                </div>
+                <div v-if="p.uncertainty" class="text-[11.5px] mt-2 leading-relaxed" style="color:var(--warn)">△ {{ p.uncertainty }}</div>
+              </div>
+
+              <div v-if="pm.dependencies && pm.dependencies.length" class="panel p-3 mt-3" style="background:var(--panel-2)">
+                <div class="lbl mb-2">Parameter dependencies</div>
+                <div v-for="(d,i) in pm.dependencies" :key="i" class="text-[11.5px] mb-1.5 leading-relaxed">
+                  <span class="mono" style="color:var(--accent)">{{ d.parameter }}</span>
+                  <span style="color:var(--txt-3)"> → {{ d.affects }}</span>
+                  <div v-if="d.note" style="color:var(--txt-3)">{{ d.note }}</div>
+                </div>
+              </div>
+
+              <div v-if="pm.open_questions && pm.open_questions.length" class="panel p-3 mt-3"
+                   style="background:rgba(255,179,64,.05);border-color:rgba(255,179,64,.3)">
+                <div class="lbl mb-2" style="color:var(--warn)">Open questions</div>
+                <div v-for="(q,i) in pm.open_questions" :key="i" class="text-[11.5px] mb-1 leading-relaxed" style="color:var(--warn)">— {{ q }}</div>
               </div>
             </div>
-            <div v-else class="text-base text-slate-500 py-10 text-center">Awaiting pipeline run</div>
+            <div v-else class="panel-b text-center py-12 mono text-[11px]" style="color:var(--txt-3)">AWAITING RUN</div>
           </div>
 
-          <div class="card fade-in bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm" style="animation-delay:60ms">
-            <div class="flex items-center justify-between mb-3.5">
-              <div class="font-bold text-white text-base">Agent 2 — Solution Architect</div>
-              <button v-if="sa" @click="copyJson(sa)" class="text-xs px-2.5 py-1 rounded-md bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-700">⧉ Copy JSON</button>
+          <!-- VALIDATION GATE — the actual product differentiator, now visible -->
+          <div class="panel ticked rise" style="animation-delay:60ms">
+            <div class="panel-h" style="justify-content:center">
+              <span class="lbl-b">Validation gate</span>
             </div>
-            <div v-if="sa">
-              <div v-if="sa.handoff_status === 'BLOCKED'" class="bg-red-500/10 border border-red-500/20 rounded-xl p-3.5 mb-3.5">
-                <div class="text-sm font-semibold text-red-400 mb-1.5">✗ Handoff blocked — no design generated</div>
-                <div v-for="(r,i) in sa.block_reasons" :key="i" class="text-sm text-red-400">• {{ r }}</div>
-              </div>
-              <div v-for="(d,i) in sa.manufacturing_design" :key="i" class="bg-slate-800/60 border border-slate-800 rounded-xl p-3.5 mb-3.5">
-                <div class="flex justify-between items-start mb-2.5">
-                  <span class="text-base font-semibold text-slate-200">{{ d.parameter }}</span>
-                  <span :class="['text-sm px-2.5 py-0.5 rounded-full font-medium',
-                    d.commercial_scale_status==='Verified'?'bg-green-500/15 text-green-400'
-                    :d.commercial_scale_status==='Unverified'?'bg-red-500/15 text-red-400'
-                    :'bg-slate-700 text-slate-400']">{{ d.commercial_scale_status || 'N/A' }}</span>
+            <div class="panel-b">
+              <div class="text-center py-2">
+                <div class="mono text-[10px] mb-3" style="color:var(--txt-3)">ICH Q9 RISK TIER</div>
+                <div class="w-14 h-14 mx-auto flex items-center justify-center mono text-[20px] font-bold"
+                     :style="{borderRadius:'2px',
+                              border:'1px solid ' + (validation ? (validation.ok ? 'var(--ok)' : 'var(--bad)') : 'var(--line-bright)'),
+                              color: validation ? (validation.ok ? 'var(--ok)' : 'var(--bad)') : 'var(--txt-3)',
+                              boxShadow: validation ? '0 0 20px ' + (validation.ok ? 'rgba(61,220,132,.35)' : 'rgba(255,92,92,.35)') : 'none'}">
+                  {{ validation ? (validation.ok ? '✓' : '✕') : '—' }}
                 </div>
-                <div class="text-sm text-slate-400 space-y-1.5">
-                  <div>Control: <span class="text-slate-300">{{ d.control }}</span></div>
-                  <div>Monitoring: <span class="text-slate-300">{{ d.monitoring }}</span></div>
-                  <div>Validation: <span class="text-slate-300">{{ d.validation_required }}</span></div>
-                  <div>Deviation handling: <span class="text-slate-300">{{ d.deviation_handling }}</span></div>
+                <div class="mono text-[12px] font-bold mt-3"
+                     :style="{color: validation ? (validation.ok ? 'var(--ok)' : 'var(--bad)') : 'var(--txt-3)'}">
+                  {{ validation ? (validation.ok ? 'HANDOFF CLEARED' : 'HANDOFF BLOCKED') : 'PENDING' }}
                 </div>
               </div>
-              <div v-if="sa.risk_flags && sa.risk_flags.length" class="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3.5">
-                <div class="text-sm font-semibold text-yellow-400 mb-1.5">⚠ Risk flags</div>
-                <div v-for="(r,i) in sa.risk_flags" :key="i" class="text-sm text-yellow-400">• {{ r }}</div>
+
+              <div class="mt-4 pt-3 space-y-2" style="border-top:1px solid var(--line)">
+                <div class="lbl">Gate rules</div>
+                <div class="text-[11px] leading-relaxed" style="color:var(--txt-3)">
+                  <div>· Criticality required on every parameter</div>
+                  <div>· <span style="color:var(--bad)">High</span> criticality → range + scale sensitivity mandatory</div>
+                  <div>· <span style="color:var(--warn)">Med/Low</span> gaps → warn, do not block</div>
+                </div>
               </div>
-              <div v-if="sa.recommended_next_step" class="text-sm text-slate-400 bg-slate-800/60 rounded-xl p-3.5 mt-3.5">→ {{ sa.recommended_next_step }}</div>
+
+              <div v-if="validation && validation.issues && validation.issues.length" class="mt-3 pt-3" style="border-top:1px solid var(--line)">
+                <div class="lbl mb-2">Findings ({{ validation.issues.length }})</div>
+                <div v-for="(iss,i) in validation.issues" :key="i" class="text-[11px] mb-1.5 leading-relaxed"
+                     :style="{color: iss.includes('non-blocking') ? 'var(--warn)' : 'var(--bad)'}">
+                  {{ iss.includes('non-blocking') ? '△' : '✕' }} {{ iss }}
+                </div>
+              </div>
+
+              <div class="mt-3 pt-3 text-[10.5px] leading-relaxed" style="border-top:1px solid var(--line);color:var(--txt-3)">
+                Agent 2 receives only Agent 1's JSON — never the brief, report or notes. Structural isolation prevents context drift.
+              </div>
             </div>
-            <div v-else class="text-base text-slate-500 py-10 text-center">Awaiting Agent 1 handoff</div>
+          </div>
+
+          <!-- AGENT 2 -->
+          <div class="panel ticked rise" style="animation-delay:120ms">
+            <div class="panel-h">
+              <span class="mono text-[11px] font-bold" style="color:var(--accent)">AGENT-2</span>
+              <span class="lbl-b flex-1">Manufacturing design</span>
+              <template v-if="sa">
+                <button class="btn btn-xs" @click="exportMarkdown(pm, sa, 'current')" title="Download blueprint as Markdown">↓ MD</button>
+                <button class="btn btn-xs" @click="copyJson(sa)">Copy</button>
+              </template>
+            </div>
+            <div class="panel-b" v-if="sa">
+              <div class="flex items-center gap-2 mb-3">
+                <span class="lbl">Handoff</span>
+                <span class="pill" :class="sa.handoff_status==='PASSED'?'p-ok':'p-bad'">{{ sa.handoff_status }}</span>
+                <span class="mono text-[10px] ml-auto" style="color:var(--txt-3)">{{ (sa.manufacturing_design||[]).length }} CONTROLS</span>
+              </div>
+
+              <div v-if="sa.handoff_status === 'BLOCKED'" class="panel p-3 mb-3"
+                   style="background:rgba(255,92,92,.05);border-color:rgba(255,92,92,.3)">
+                <div class="lbl mb-2" style="color:var(--bad)">Blocked — no design generated</div>
+                <div v-for="(r,i) in sa.block_reasons" :key="i" class="text-[11.5px] mb-1 leading-relaxed" style="color:var(--bad)">— {{ r }}</div>
+              </div>
+
+              <div v-for="(d,i) in sa.manufacturing_design" :key="i" class="panel p-3 mb-2" style="background:var(--panel-2)">
+                <div class="flex justify-between items-start gap-2 mb-2">
+                  <span class="text-[13px] font-semibold">{{ d.parameter }}</span>
+                  <span class="pill" :class="d.commercial_scale_status==='Verified'?'p-ok':d.commercial_scale_status==='Unverified'?'p-warn':'p-mute'">
+                    {{ d.commercial_scale_status || 'N/A' }}
+                  </span>
+                </div>
+                <div class="space-y-1 text-[11.5px] leading-relaxed">
+                  <div v-if="d.control"><span class="lbl">Control </span><span style="color:var(--txt-2)">{{ d.control }}</span></div>
+                  <div v-if="d.monitoring"><span class="lbl">Monitor </span><span style="color:var(--txt-2)">{{ d.monitoring }}</span></div>
+                  <div v-if="d.validation_required"><span class="lbl">Validate </span><span style="color:var(--txt-2)">{{ d.validation_required }}</span></div>
+                  <div v-if="d.deviation_handling"><span class="lbl">Deviation </span><span style="color:var(--txt-2)">{{ d.deviation_handling }}</span></div>
+                </div>
+                <div v-if="d.traceability" class="mono text-[10.5px] mt-2 pt-2" style="border-top:1px solid var(--line);color:var(--accent)">
+                  ↳ {{ d.traceability }}
+                </div>
+              </div>
+
+              <div v-if="sa.risk_flags && sa.risk_flags.length" class="panel p-3 mt-3"
+                   style="background:rgba(255,179,64,.05);border-color:rgba(255,179,64,.3)">
+                <div class="lbl mb-2" style="color:var(--warn)">Risk flags</div>
+                <div v-for="(r,i) in sa.risk_flags" :key="i" class="text-[11.5px] mb-1 leading-relaxed" style="color:var(--warn)">△ {{ r }}</div>
+              </div>
+
+              <div v-if="sa.recommended_next_step" class="panel p-3 mt-3" style="background:var(--panel-2)">
+                <div class="lbl mb-1.5">Recommended next step</div>
+                <div class="text-[11.5px] leading-relaxed" style="color:var(--txt-2)">{{ sa.recommended_next_step }}</div>
+              </div>
+            </div>
+            <div v-else class="panel-b text-center py-12 mono text-[11px]" style="color:var(--txt-3)">AWAITING HANDOFF</div>
           </div>
         </div>
       </div>
 
-      <!-- ═══════════ AUDIT LOGS ═══════════ -->
+      <!-- ══════════ AUDIT ══════════ -->
       <div v-else-if="activeView === 'audit'" key="audit" class="view-anim">
-        <div class="flex items-center gap-3 mb-6 flex-wrap">
-          <select v-model="auditFilter" @change="loadAudit"
-            class="text-base bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-300 focus:outline-none focus:border-blue-500">
-            <option value="">All statuses</option>
+        <div class="flex items-center gap-2.5 mb-4">
+          <select v-model="auditFilter" @change="loadAudit" class="fld mono" style="width:150px;font-size:11px;padding:7px 10px">
+            <option value="">ALL STATUSES</option>
             <option>PASS</option><option>BLOCK</option><option>WARN</option><option>INFO</option><option>ERROR</option>
           </select>
-          <select v-model="auditAgent" @change="loadAudit"
-            class="text-base bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-300 focus:outline-none focus:border-blue-500">
-            <option value="">All agents</option>
+          <select v-model="auditAgent" @change="loadAudit" class="fld mono" style="width:170px;font-size:11px;padding:7px 10px">
+            <option value="">ALL AGENTS</option>
             <option>PM Agent</option><option>SA Agent</option><option>Validation Layer</option><option>System</option>
           </select>
-          <button @click="loadAudit" class="btn-primary text-sm font-medium px-3.5 py-2.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700">↻ Refresh</button>
-          <span class="ml-auto text-sm text-slate-500">{{ auditLogs.length }} entries</span>
+          <button class="btn btn-xs" @click="loadAudit">↻ Refresh</button>
+          <button class="btn btn-xs" @click="exportAudit" title="Download the filtered trace as CSV">↓ CSV</button>
+          <span class="mono text-[11px] ml-auto" style="color:var(--txt-3)">{{ auditLogs.length }} ENTRIES</span>
         </div>
 
-        <div class="card fade-in bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-          <table class="w-full text-base">
+        <div class="panel ticked">
+          <table class="w-full">
             <thead>
-              <tr class="border-b border-slate-800">
-                <th class="text-left px-5 py-3.5 text-sm font-semibold text-slate-500 uppercase tracking-wider">Timestamp</th>
-                <th class="text-left px-5 py-3.5 text-sm font-semibold text-slate-500 uppercase tracking-wider">Run</th>
-                <th class="text-left px-5 py-3.5 text-sm font-semibold text-slate-500 uppercase tracking-wider">Agent</th>
-                <th class="text-left px-5 py-3.5 text-sm font-semibold text-slate-500 uppercase tracking-wider">Event</th>
-                <th class="text-left px-5 py-3.5 text-sm font-semibold text-slate-500 uppercase tracking-wider">Detail</th>
-                <th class="text-left px-5 py-3.5 text-sm font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+              <tr style="border-bottom:1px solid var(--line)">
+                <th class="text-left px-4 py-2.5 lbl">Timestamp</th>
+                <th class="text-left px-4 py-2.5 lbl">Run</th>
+                <th class="text-left px-4 py-2.5 lbl">Agent</th>
+                <th class="text-left px-4 py-2.5 lbl">Event</th>
+                <th class="text-left px-4 py-2.5 lbl">Detail</th>
+                <th class="text-left px-4 py-2.5 lbl">Status</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-if="auditLogs.length === 0"><td colspan="6" class="px-5 py-12 text-center text-slate-500 text-base">No entries match the current filter</td></tr>
+              <tr v-if="auditLogs.length === 0">
+                <td colspan="6" class="px-4 py-14 text-center mono text-[11px]" style="color:var(--txt-3)">NO ENTRIES MATCH FILTER</td>
+              </tr>
               <template v-for="e in auditLogs" :key="e.id">
                 <tr @click="expandedLogId = expandedLogId === e.id ? null : e.id"
-                  class="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors cursor-pointer">
-                  <td class="px-5 py-4 font-mono text-sm text-slate-400 whitespace-nowrap">{{ e.timestamp }}</td>
-                  <td class="px-5 py-4 text-sm text-slate-400">#{{ e.run_id }}</td>
-                  <td class="px-5 py-4 whitespace-nowrap"><span class="text-sm px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 font-medium">{{ e.agent }}</span></td>
-                  <td class="px-5 py-4 text-base text-slate-200">{{ e.event }}</td>
-                  <td class="px-5 py-4 text-sm text-slate-500 max-w-xs truncate">{{ e.detail }}</td>
-                  <td class="px-5 py-4 whitespace-nowrap">
-                    <span :class="['text-sm px-3 py-1 rounded-full font-semibold',
-                      e.status==='PASS'?'bg-green-500/15 text-green-400'
-                      :e.status==='BLOCK'||e.status==='ERROR'?'bg-red-500/15 text-red-400'
-                      :e.status==='WARN'?'bg-yellow-500/15 text-yellow-400'
-                      :'bg-blue-500/15 text-blue-400']">{{ e.status }}</span>
-                  </td>
+                    style="border-bottom:1px solid var(--line);cursor:pointer">
+                  <td class="px-4 py-3 mono text-[11px] whitespace-nowrap" style="color:var(--txt-3)">{{ fmtTime(e.timestamp) }}</td>
+                  <td class="px-4 py-3 mono text-[11px] font-bold" style="color:var(--accent)">{{ String(e.run_id).padStart(3,'0') }}</td>
+                  <td class="px-4 py-3 mono text-[11px] whitespace-nowrap" style="color:var(--txt-2)">{{ e.agent }}</td>
+                  <td class="px-4 py-3 text-[12.5px]">{{ e.event }}</td>
+                  <td class="px-4 py-3 text-[11.5px] max-w-[300px] truncate" style="color:var(--txt-3)">{{ e.detail }}</td>
+                  <td class="px-4 py-3"><span class="pill" :class="statusPill(e.status)">{{ e.status }}</span></td>
                 </tr>
-                <tr v-if="expandedLogId === e.id" class="bg-slate-950/60 border-b border-slate-800/50">
-                  <td colspan="6" class="px-5 py-3.5 text-sm text-slate-300 leading-relaxed">{{ e.detail || '(no additional detail)' }}</td>
+                <tr v-if="expandedLogId === e.id" style="border-bottom:1px solid var(--line);background:#0a0c10">
+                  <td colspan="6" class="px-4 py-3 text-[12px] leading-relaxed" style="color:var(--txt-2)">
+                    {{ e.detail || '(no additional detail)' }}
+                  </td>
                 </tr>
               </template>
             </tbody>
           </table>
         </div>
 
-        <div class="mt-4 bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-start gap-3">
-          <span class="text-blue-400 text-lg shrink-0">🔗</span>
-          <div class="text-sm text-slate-400 leading-relaxed">
-            <span class="text-slate-300 font-semibold">Full traceability preserved.</span>
-            Every event is written to SQLite as it happens. Agent 2 receives only Agent 1's JSON output — never the original client brief, pilot report, or lab notes — preventing context drift.
+        <div class="panel p-4 mt-3 flex items-start gap-3">
+          <span class="mono text-[11px]" style="color:var(--accent)">[TRACE]</span>
+          <div class="text-[11.5px] leading-relaxed" style="color:var(--txt-3)">
+            <span style="color:var(--txt-2)">Full traceability preserved.</span>
+            Every event is written to the database as it happens. Agent 2 receives only Agent 1's JSON output —
+            never the original client brief, pilot report, or lab notes — preventing context drift across the handoff.
           </div>
         </div>
       </div>
@@ -540,18 +736,29 @@
 const { createApp } = Vue;
 const API = "/api";
 
+const SAMPLE_BRIEF = `Transfer our commercial-scale tablet coating process (Product TC-88) to the new manufacturing site. All parameters below are fully validated at commercial scale via three consecutive PPQ batches (Batch Records BR-2201, BR-2202, BR-2203).
+
+1. Coating pan temperature: target 52 C, validated range 51-53 C, High criticality, high impact on film adhesion and dissolution, low scale sensitivity, evidence source: PPQ batch data BR-2201 to BR-2203.
+
+2. Spray rate: target 12 g/min, validated range 10-14 g/min, Medium criticality, moderate impact on coating uniformity, low scale sensitivity, evidence source: PPQ batch data BR-2201 to BR-2203.
+
+3. Inlet air temperature: target 60 C, validated range 58-62 C, High criticality, controls drying rate and prevents tablet sticking, low scale sensitivity, evidence source: PPQ batch data BR-2201 to BR-2203.
+
+4. Batch size: 200 kg, validated range 190-210 kg, High criticality, matches commercial equipment capacity, low scale sensitivity, evidence source: PPQ batch data BR-2201 to BR-2203.`;
+
 createApp({
   data() {
     return {
       activeView: 'dashboard',
       apiOnline: false,
       navItems: [
-        { id:'dashboard', icon:'◈', label:'Dashboard',   description:'Transfer health overview' },
-        { id:'pipeline',  icon:'⬡', label:'Run Pipeline', description:'Upload inputs and run the two-agent pipeline' },
-        { id:'audit',     icon:'📋', label:'Audit Logs',   description:'Full traceability and event record' },
+        { id:'dashboard', label:'Dashboard',    description:'Transfer health overview' },
+        { id:'pipeline',  label:'Run Pipeline', description:'Upload inputs and run the two-agent pipeline' },
+        { id:'audit',     label:'Audit Logs',   description:'Full traceability and event record' },
       ],
       stats: { total_runs:0, passed:0, blocked:0, errored:0, audit_entries:0, pass_rate:0 },
       runs: [],
+      runSearch: '',
       selectedRun: null,
 
       a1: { key:'', model:'', base_url:'https://openrouter.ai/api/v1/chat/completions', models:[], live:false },
@@ -564,6 +771,8 @@ createApp({
 
       running: false,
       runError: '',
+      elapsed: 0,
+      _timer: null,
       pm: null,
       validation: null,
       sa: null,
@@ -586,8 +795,52 @@ createApp({
       if (this.pm) return 1;
       return this.running ? 1 : 0;
     },
+    kpis() {
+      return [
+        { label:'Total runs',    value:this.stats.total_runs,    sub:'logged to database', color:'var(--accent)' },
+        { label:'Cleared',       value:this.stats.passed,        sub:'handoff passed',     color:'var(--ok)' },
+        { label:'Blocked',       value:this.stats.blocked,       sub:'gate refused',       color:'var(--bad)' },
+        { label:'Audit entries', value:this.stats.audit_entries, sub:'immutable trace',    color:'var(--warn)' },
+      ];
+    },
+    filteredRuns() {
+      const q = this.runSearch.trim().toLowerCase();
+      if (!q) return this.runs;
+      return this.runs.filter(r =>
+        String(r.id).includes(q) ||
+        (r.client_text || '').toLowerCase().includes(q) ||
+        (r.status || '').toLowerCase().includes(q) ||
+        (r.confidence || '').toLowerCase().includes(q)
+      );
+    },
+    inputCount() {
+      return (this.pilotReportFile ? 1 : 0) + (this.labNotesFile ? 1 : 0) + (this.clientText.trim() ? 1 : 0);
+    },
   },
   methods: {
+    /* ── presentation helpers ── */
+    statusPill(s) {
+      if (s === 'PASSED' || s === 'PASS') return 'p-ok';
+      if (s === 'BLOCKED' || s === 'BLOCK' || s === 'ERROR') return 'p-bad';
+      if (s === 'WARN' || s === 'RUNNING') return 'p-warn';
+      return 'p-info';
+    },
+    fmtTime(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      if (isNaN(d)) return iso;
+      const p = n => String(n).padStart(2,'0');
+      return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+    },
+    fmtClock(iso) {
+      if (!iso) return '--:--:--';
+      const d = new Date(iso);
+      if (isNaN(d)) return iso;
+      const p = n => String(n).padStart(2,'0');
+      return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+    },
+
+    /* ── toasts ── */
     addToast(type, message, ms = 4000) {
       const id = ++this.toastSeq;
       this.toasts.push({ id, type, message });
@@ -596,6 +849,8 @@ createApp({
     dismissToast(id) {
       this.toasts = this.toasts.filter(t => t.id !== id);
     },
+
+    /* ── clipboard + file export ── */
     async copyJson(obj) {
       try {
         await navigator.clipboard.writeText(JSON.stringify(obj, null, 2));
@@ -604,10 +859,92 @@ createApp({
         this.addToast('error', 'Could not copy — clipboard access denied');
       }
     },
+    download(filename, text, mime = 'text/plain') {
+      const blob = new Blob([text], { type: mime + ';charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      this.addToast('success', 'Downloaded ' + filename);
+    },
+    exportJson(obj, name) {
+      this.download(`pharmabridge-${name}.json`, JSON.stringify(obj, null, 2), 'application/json');
+    },
+    exportMarkdown(pm, sa, name) {
+      if (!sa) { this.addToast('error', 'Nothing to export yet'); return; }
+      const L = [];
+      L.push('# PharmaBridge — Manufacturing Design Blueprint', '');
+      L.push(`- **Generated:** ${new Date().toISOString()}`);
+      L.push(`- **Handoff status:** ${sa.handoff_status}`);
+      if (pm) L.push(`- **Extraction confidence:** ${pm.confidence}`);
+      L.push('');
+      if (pm && pm.requirement_summary) L.push('## Requirement summary', '', pm.requirement_summary, '');
+      if (sa.block_reasons && sa.block_reasons.length) {
+        L.push('## Blocked — no design generated', '');
+        sa.block_reasons.forEach(r => L.push(`- ${r}`));
+        L.push('');
+      }
+      if (sa.manufacturing_design && sa.manufacturing_design.length) {
+        L.push('## Manufacturing controls', '');
+        L.push('| Parameter | Control | Monitoring | Validation | Deviation handling | Commercial scale |');
+        L.push('|---|---|---|---|---|---|');
+        sa.manufacturing_design.forEach(d => {
+          const c = v => (v || '—').toString().replace(/\|/g, '\\|').replace(/\n/g, ' ');
+          L.push(`| ${c(d.parameter)} | ${c(d.control)} | ${c(d.monitoring)} | ${c(d.validation_required)} | ${c(d.deviation_handling)} | ${c(d.commercial_scale_status)} |`);
+        });
+        L.push('');
+      }
+      if (pm && pm.parameters && pm.parameters.length) {
+        L.push('## Source parameters', '');
+        L.push('| Parameter | Value | Validated range | Criticality | Scale sensitivity | Evidence |');
+        L.push('|---|---|---|---|---|---|');
+        pm.parameters.forEach(p => {
+          const c = v => (v || '—').toString().replace(/\|/g, '\\|').replace(/\n/g, ' ');
+          L.push(`| ${c(p.name)} | ${c(p.value)} | ${c(p.validated_range)} | ${c(p.criticality)} | ${c(p.scale_sensitivity)} | ${c(p.evidence_source)} |`);
+        });
+        L.push('');
+      }
+      if (sa.risk_flags && sa.risk_flags.length) {
+        L.push('## Risk flags', '');
+        sa.risk_flags.forEach(r => L.push(`- ${r}`));
+        L.push('');
+      }
+      if (pm && pm.open_questions && pm.open_questions.length) {
+        L.push('## Open questions', '');
+        pm.open_questions.forEach(q => L.push(`- ${q}`));
+        L.push('');
+      }
+      if (sa.recommended_next_step) L.push('## Recommended next step', '', sa.recommended_next_step, '');
+      this.download(`pharmabridge-blueprint-${name}.md`, L.join('\n'), 'text/markdown');
+    },
+    exportAudit() {
+      if (!this.auditLogs.length) { this.addToast('error', 'No audit entries to export'); return; }
+      const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+      const rows = [['timestamp','run_id','agent','event','detail','status'].join(',')];
+      this.auditLogs.forEach(e => rows.push([e.timestamp,e.run_id,e.agent,e.event,e.detail,e.status].map(esc).join(',')));
+      this.download('pharmabridge-audit.csv', rows.join('\n'), 'text/csv');
+    },
+
+    /* ── inputs ── */
     onDropFile(e, target) {
       const file = e.dataTransfer?.files?.[0];
       if (file) this[target] = file;
     },
+    clearInputs() {
+      this.clientText = '';
+      this.pilotReportFile = null;
+      this.labNotesFile = null;
+      if (this.$refs.pilotInput) this.$refs.pilotInput.value = '';
+      if (this.$refs.labInput) this.$refs.labInput.value = '';
+      this.addToast('info', 'Inputs cleared');
+    },
+    loadSample() {
+      this.clientText = SAMPLE_BRIEF;
+      this.addToast('info', 'Sample brief loaded — a complete, gate-passing example');
+    },
+
+    /* ── run history ── */
     async openRun(id) {
       try {
         const res = await fetch(`${API}/runs/${id}`);
@@ -617,6 +954,26 @@ createApp({
         this.addToast('error', 'Could not load run details');
       }
     },
+    reuseRun(r) {
+      this.clientText = r.client_text || '';
+      this.activeView = 'pipeline';
+      this.addToast('info', `Loaded brief from RUN-${String(r.id).padStart(3,'0')} — re-attach any files, then execute`);
+    },
+    async deleteRun(id) {
+      if (!confirm(`Delete RUN-${String(id).padStart(3,'0')} and its audit entries? This cannot be undone.`)) return;
+      try {
+        const res = await fetch(`${API}/runs/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Delete failed');
+        if (this.selectedRun && this.selectedRun.id === id) this.selectedRun = null;
+        this.addToast('success', `RUN-${String(id).padStart(3,'0')} deleted`);
+        this.loadDashboard();
+        this.loadAudit();
+      } catch (e) {
+        this.addToast('error', 'Could not delete run');
+      }
+    },
+
+    /* ── data loading ── */
     async refreshModels(which) {
       const agent = this[which];
       try {
@@ -634,7 +991,7 @@ createApp({
       try {
         const [s, r] = await Promise.all([
           fetch(`${API}/dashboard`).then(r => r.json()),
-          fetch(`${API}/runs?limit=10`).then(r => r.json()),
+          fetch(`${API}/runs?limit=50`).then(r => r.json()),
         ]);
         this.stats = s;
         this.runs = r.runs;
@@ -651,6 +1008,8 @@ createApp({
         this.auditLogs = data.entries;
       } catch (e) { this.auditLogs = []; }
     },
+
+    /* ── pipeline ── */
     resetPipeline() {
       this.pm = null; this.validation = null; this.sa = null; this.runError = '';
     },
@@ -662,6 +1021,10 @@ createApp({
         return;
       }
       this.running = true;
+      this.elapsed = 0;
+      clearInterval(this._timer);
+      this._timer = setInterval(() => { this.elapsed++; }, 1000);
+
       const form = new FormData();
       form.append('client_text', this.clientText);
       form.append('a1_key', this.a1.key);
@@ -681,16 +1044,18 @@ createApp({
         this.validation = data.validation;
         this.sa = data.sa;
         this.loadDashboard();
+        this.loadAudit();
         if (data.sa?.handoff_status === 'BLOCKED') {
-          this.addToast('error', 'Handoff blocked at validation — see Agent 2 panel for reasons');
+          this.addToast('error', 'Handoff blocked at validation — see the gate panel for findings');
         } else {
-          this.addToast('success', 'Pipeline complete — handoff passed');
+          this.addToast('success', `Pipeline complete in ${this.elapsed}s — handoff cleared`);
         }
       } catch (e) {
         this.runError = String(e.message || e);
         this.addToast('error', this.runError);
       } finally {
         this.running = false;
+        clearInterval(this._timer);
       }
     },
   },

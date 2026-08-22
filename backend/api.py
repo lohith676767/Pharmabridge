@@ -165,7 +165,15 @@ def get_run(run_id: int):
     run = db.get_run(run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="Run not found")
+    run["audit"] = db.list_audit(run_id=run_id)
     return run
+
+
+@app.delete("/api/runs/{run_id}")
+def delete_run(run_id: int):
+    if not db.delete_run(run_id):
+        raise HTTPException(status_code=404, detail="Run not found")
+    return {"deleted": run_id}
 
 
 @app.get("/api/audit")

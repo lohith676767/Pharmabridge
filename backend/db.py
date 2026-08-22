@@ -157,15 +157,34 @@ def add_audit_entry(run_id: int, agent: str, event: str, detail: str, status: st
         )
 
 
+def _duration_seconds(first: Optional[str], last: Optional[str]) -> Optional[float]:
+    """Wall-clock time a run took, derived from its first and last audit
+    entry — no extra column needed."""
+    if not first or not last:
+        return None
+    try:
+        return round((datetime.fromisoformat(last) - datetime.fromisoformat(first)).total_seconds(), 1)
+    except ValueError:
+        return None
+
+
 def list_runs(limit: int = 50) -> list[dict]:
     with get_conn() as conn:
         rows = conn.execute(
             _q("SELECT id, created_at, client_text, status, pm_json FROM runs ORDER BY id DESC LIMIT ?"),
             (limit,),
         ).fetchall()
+        spans = {
+            s["run_id"]: (s["first_at"], s["last_at"])
+            for s in conn.execute(
+                "SELECT run_id, MIN(timestamp) AS first_at, MAX(timestamp) AS last_at "
+                "FROM audit_log GROUP BY run_id"
+            ).fetchall()
+        }
     result = []
     for r in rows:
         pm = json.loads(r["pm_json"]) if r["pm_json"] else None
+        first, last = spans.get(r["id"], (None, None))
         result.append({
             "id": r["id"],
             "created_at": r["created_at"],
@@ -173,8 +192,17 @@ def list_runs(limit: int = 50) -> list[dict]:
             "status": r["status"],
             "confidence": pm.get("confidence") if pm else None,
             "parameter_count": len(pm.get("parameters", [])) if pm else 0,
+            "duration_s": _duration_seconds(first, last),
         })
     return result
+
+
+def delete_run(run_id: int) -> bool:
+    """Remove a run and its audit entries. Returns False if it didn't exist."""
+    with get_conn() as conn:
+        conn.execute(_q("DELETE FROM audit_log WHERE run_id = ?"), (run_id,))
+        cur = conn.execute(_q("DELETE FROM runs WHERE id = ?"), (run_id,))
+        return (cur.rowcount or 0) > 0
 
 
 def get_run(run_id: int) -> Optional[dict]:
