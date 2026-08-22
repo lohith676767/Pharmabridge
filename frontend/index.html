@@ -187,6 +187,94 @@
     </transition-group>
   </div>
 
+  <!-- ══════════ LIVE PIPELINE CONSOLE ══════════
+       Streams the run's real audit entries as the backend writes them —
+       these are the same records that land in the permanent trace, not a
+       simulated progress animation. -->
+  <div v-if="showLive" class="modal-overlay-anim fixed inset-0 flex items-center justify-center p-6"
+       style="z-index:45;background:rgba(4,14,28,.82);backdrop-filter:blur(7px)">
+    <div class="modal-panel-anim panel ticked w-full max-w-3xl">
+
+      <div class="panel-h">
+        <span class="w-2 h-2 rounded-full" :class="running ? 'blink' : ''"
+              :style="{background: running ? 'var(--accent)' : liveOk ? 'var(--ok)' : 'var(--bad)',
+                       boxShadow:'0 0 9px currentColor'}"></span>
+        <div class="flex-1">
+          <div class="lbl">{{ running ? 'Pipeline executing' : 'Pipeline complete' }}</div>
+          <div class="mono text-[15px] font-bold mt-0.5">
+            {{ liveRunId ? 'RUN-' + String(liveRunId).padStart(3,'0') : 'INITIALISING…' }}
+          </div>
+        </div>
+        <div class="text-right">
+          <div class="lbl">Elapsed</div>
+          <div class="mono text-[15px] font-bold mt-0.5" style="color:var(--accent)">{{ elapsed }}s</div>
+        </div>
+        <button v-if="!running" class="btn btn-xs" @click="showLive = false">Close</button>
+        <button v-else class="btn btn-xs" @click="showLive = false" title="Keeps running in the background">Hide</button>
+      </div>
+
+      <!-- Stage rail -->
+      <div class="panel-b relative overflow-hidden" style="border-bottom:1px solid var(--line)">
+        <div v-if="running" class="scanline"></div>
+        <div class="flex items-center">
+          <template v-for="(s,i) in steps" :key="s">
+            <div class="flex flex-col items-center gap-1.5 shrink-0" style="min-width:84px">
+              <div class="w-7 h-7 flex items-center justify-center mono text-[10px] font-bold"
+                :style="{borderRadius:'2px',
+                         border:'1px solid ' + (i < liveStage ? 'var(--ok)' : i === liveStage ? 'var(--accent)' : 'var(--line-bright)'),
+                         color:   i < liveStage ? 'var(--ok)' : i === liveStage ? 'var(--accent)' : 'var(--txt-3)',
+                         background: i <= liveStage ? 'rgba(56,189,248,.08)' : 'transparent',
+                         boxShadow: i === liveStage && running ? '0 0 13px rgba(56,189,248,.55)' : 'none'}"
+                :class="i === liveStage && running ? 'blink' : ''">
+                {{ i < liveStage ? '✓' : String(i+1).padStart(2,'0') }}
+              </div>
+              <span class="lbl text-center" :style="{color: i <= liveStage ? 'var(--txt-2)' : 'var(--txt-3)'}">{{ s }}</span>
+            </div>
+            <div v-if="i < steps.length - 1" class="flex-1 h-px mx-1"
+                 :style="{background: i < liveStage ? 'var(--ok)' : 'var(--line-bright)'}"></div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Live event stream -->
+      <div class="panel-b">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="lbl flex-1">Event stream · live from audit trace</span>
+          <span class="mono text-[10px]" style="color:var(--txt-3)">{{ liveLog.length }} EVENTS</span>
+        </div>
+        <div ref="liveBox" class="panel p-3 overflow-y-auto"
+             style="background:rgba(4,16,32,.75);height:230px">
+          <div v-if="liveLog.length === 0" class="mono text-[11px]" style="color:var(--txt-3)">
+            <span class="blink">▍</span> waiting for first event…
+          </div>
+          <div v-for="e in liveLog" :key="e.id" class="mono text-[11px] leading-relaxed flex gap-2.5">
+            <span class="shrink-0" style="color:var(--txt-3)">{{ fmtClock(e.timestamp) }}</span>
+            <span class="shrink-0 font-bold" style="width:58px"
+                  :style="{color: e.status==='PASS' ? 'var(--ok)' : (e.status==='BLOCK'||e.status==='ERROR') ? 'var(--bad)' : e.status==='WARN' ? 'var(--warn)' : 'var(--accent)'}">
+              {{ e.status }}
+            </span>
+            <span class="shrink-0" style="width:112px;color:var(--accent-2)">{{ e.agent }}</span>
+            <span class="flex-1" style="color:var(--txt-2)">
+              {{ e.event }}<template v-if="e.detail"><span style="color:var(--txt-3)"> — {{ e.detail }}</span></template>
+            </span>
+          </div>
+          <div v-if="running" class="mono text-[11px] mt-1" style="color:var(--accent)"><span class="blink">▍</span></div>
+        </div>
+
+        <div v-if="!running" class="flex items-center gap-2 mt-3 pt-3" style="border-top:1px solid var(--line)">
+          <span class="pill" :class="liveOk ? 'p-ok' : 'p-bad'">
+            {{ liveOk ? 'Handoff cleared' : 'Handoff blocked' }}
+          </span>
+          <span class="text-[11.5px]" style="color:var(--txt-3)">
+            {{ liveOk ? 'Manufacturing design generated and traced to source parameters.'
+                      : 'Gate refused the handoff — findings are shown in the validation column.' }}
+          </span>
+          <button class="btn btn-xs btn-go ml-auto" @click="showLive = false">View results</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ══════════ RUN DETAIL MODAL ══════════ -->
   <div v-if="selectedRun" @click.self="selectedRun = null"
     class="modal-overlay-anim fixed inset-0 z-40 flex items-center justify-center p-6"
@@ -786,6 +874,14 @@ createApp({
       runError: '',
       elapsed: 0,
       _timer: null,
+
+      // Live pipeline console
+      showLive: false,
+      liveLog: [],
+      liveRunId: null,
+      liveOk: false,
+      _poll: null,
+      _seenIds: null,
       pm: null,
       validation: null,
       sa: null,
@@ -828,6 +924,20 @@ createApp({
     },
     inputCount() {
       return (this.pilotReportFile ? 1 : 0) + (this.labNotesFile ? 1 : 0) + (this.clientText.trim() ? 1 : 0);
+    },
+    /* Which of the five stages the live console is showing, derived from
+       the audit events actually received — not from a timer. */
+    liveStage() {
+      let stage = 0;
+      for (const e of this.liveLog) {
+        const ev = (e.event || '').toLowerCase();
+        if (ev.includes('run started') || ev.includes('parsed')) stage = Math.max(stage, 1);
+        if (e.agent === 'PM Agent') stage = Math.max(stage, 1);
+        if (e.agent === 'Validation Layer' || ev.includes('extraction complete')) stage = Math.max(stage, 2);
+        if (e.agent === 'SA Agent') stage = Math.max(stage, 3);
+        if (ev.includes('pipeline complete')) stage = 4;
+      }
+      return stage;
     },
   },
   methods: {
@@ -1022,6 +1132,56 @@ createApp({
       } catch (e) { this.auditLogs = []; }
     },
 
+    /* ── live console ── */
+    async pollLive() {
+      try {
+        let entries;
+        if (this.liveRunId == null) {
+          // Discover which run is in flight. Until one exists the console
+          // shows "waiting" rather than replaying an older run.
+          const res = await fetch(`${API}/runs/active`);
+          if (!res.ok) return;
+          const data = await res.json();
+          if (!data.run) return;
+          this.liveRunId = data.run.id;
+          entries = data.audit || [];
+        } else {
+          // Pinned to one run id, so the log can never mix two runs and
+          // still resolves after the status flips away from RUNNING.
+          const res = await fetch(`${API}/audit?run_id=${this.liveRunId}`);
+          if (!res.ok) return;
+          entries = (await res.json()).entries || [];
+        }
+        // Audit comes back newest-first; show oldest-first so it reads
+        // like a console, appending only entries not already shown.
+        for (const e of [...entries].reverse()) {
+          if (!this._seenIds.has(e.id)) {
+            this._seenIds.add(e.id);
+            this.liveLog.push(e);
+          }
+        }
+        this.$nextTick(() => {
+          const box = this.$refs.liveBox;
+          if (box) box.scrollTop = box.scrollHeight;
+        });
+      } catch (e) { /* transient poll failure is fine; next tick retries */ }
+    },
+    startLive() {
+      this.showLive = true;
+      this.liveLog = [];
+      this.liveRunId = null;
+      this.liveOk = false;
+      this._seenIds = new Set();
+      clearInterval(this._poll);
+      this._poll = setInterval(() => this.pollLive(), 700);
+    },
+    async stopLive(ok) {
+      clearInterval(this._poll);
+      this._poll = null;
+      await this.pollLive();   // final sweep so the closing entries appear
+      this.liveOk = !!ok;
+    },
+
     /* ── pipeline ── */
     resetPipeline() {
       this.pm = null; this.validation = null; this.sa = null; this.runError = '';
@@ -1037,6 +1197,7 @@ createApp({
       this.elapsed = 0;
       clearInterval(this._timer);
       this._timer = setInterval(() => { this.elapsed++; }, 1000);
+      this.startLive();
 
       const form = new FormData();
       form.append('client_text', this.clientText);
@@ -1058,13 +1219,16 @@ createApp({
         this.sa = data.sa;
         this.loadDashboard();
         this.loadAudit();
-        if (data.sa?.handoff_status === 'BLOCKED') {
+        const cleared = data.sa?.handoff_status !== 'BLOCKED';
+        await this.stopLive(cleared);
+        if (!cleared) {
           this.addToast('error', 'Handoff blocked at validation — see the gate panel for findings');
         } else {
           this.addToast('success', `Pipeline complete in ${this.elapsed}s — handoff cleared`);
         }
       } catch (e) {
         this.runError = String(e.message || e);
+        await this.stopLive(false);
         this.addToast('error', this.runError);
       } finally {
         this.running = false;

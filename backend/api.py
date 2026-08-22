@@ -160,6 +160,24 @@ def get_runs(limit: int = 50):
     return {"runs": db.list_runs(limit=limit)}
 
 
+@app.get("/api/runs/active")
+def get_active_run():
+    """The run currently in flight, or null if nothing is running.
+
+    The pipeline writes an audit entry as it completes each stage, so a
+    caller can poll this to discover the live run id and then follow that
+    run's audit trail for real progress — no simulated stepping.
+
+    Deliberately does NOT fall back to the most recent finished run: that
+    would make a freshly-opened console replay the previous run's events
+    as though they were happening now.
+    """
+    active = next((r for r in db.list_runs(limit=10) if r["status"] == "RUNNING"), None)
+    if active is None:
+        return {"run": None, "audit": []}
+    return {"run": active, "audit": db.list_audit(run_id=active["id"])}
+
+
 @app.get("/api/runs/{run_id}")
 def get_run(run_id: int):
     run = db.get_run(run_id)
