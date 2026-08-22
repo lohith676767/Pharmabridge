@@ -270,13 +270,22 @@ def _parse_json_output(raw: str, label: str) -> dict:
         raise AgentError(f"{label} returned non-parseable output: {e}\nRaw:\n{raw}")
 
 
+def _validate_output(model_cls, data: dict, label: str):
+    from pydantic import ValidationError
+    try:
+        return model_cls.model_validate(data)
+    except ValidationError as e:
+        missing_or_bad = "; ".join(f"{'.'.join(str(p) for p in err['loc'])}: {err['msg']}" for err in e.errors())
+        raise AgentError(f"{label} output is missing/invalid fields — {missing_or_bad}\nRaw:\n{json.dumps(data, indent=2)}")
+
+
 def run_pm_agent(config: AgentConfig, client_text: str, pilot_report_text: str = "", lab_notes_text: str = "") -> PMOutput:
     user_content = build_agent1_input(client_text, pilot_report_text, lab_notes_text)
     raw = call_agent(config, PM_SYSTEM, user_content)
-    return PMOutput.model_validate(_parse_json_output(raw, "Agent 1"))
+    return _validate_output(PMOutput, _parse_json_output(raw, "Agent 1"), "Agent 1")
 
 
 def run_sa_agent(config: AgentConfig, pm: PMOutput) -> SAOutput:
     user_content = f"Process Knowledge Package from PM Agent:\n{pm.model_dump_json(indent=2)}"
     raw = call_agent(config, SA_SYSTEM, user_content)
-    return SAOutput.model_validate(_parse_json_output(raw, "Agent 2"))
+    return _validate_output(SAOutput, _parse_json_output(raw, "Agent 2"), "Agent 2")

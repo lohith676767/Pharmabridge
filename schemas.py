@@ -27,7 +27,7 @@ class PMOutput(BaseModel):
     parameters: List[Parameter] = Field(default_factory=list)
     dependencies: List[Dependency] = Field(default_factory=list)
     open_questions: List[str] = Field(default_factory=list)
-    confidence: str  # "Complete" | "Partial" | "Insufficient"
+    confidence: str = "Partial"  # "Complete" | "Partial" | "Insufficient" — defaults if the model omits it
 
 
 class ManufacturingControl(BaseModel):
