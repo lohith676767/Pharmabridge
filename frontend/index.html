@@ -18,19 +18,100 @@
   ::-webkit-scrollbar-track{background:transparent}
   ::-webkit-scrollbar-thumb{background:#334155;border-radius:3px}
   .bar-fill{transition:width .8s cubic-bezier(.4,0,.2,1)}
-  .card{transition:border-color .2s ease, box-shadow .2s ease, transform .2s ease}
+  .card{transition:border-color .2s ease, box-shadow .2s ease, transform .15s ease}
   .card:hover{border-color:#334155;box-shadow:0 8px 24px -8px rgba(0,0,0,.5)}
+  .card-lift:hover{transform:translateY(-2px)}
   .btn-primary{transition:filter .15s ease, box-shadow .15s ease, transform .1s ease}
-  .btn-primary:hover:not(:disabled){filter:brightness(1.1)}
+  .btn-primary:hover:not(:disabled){filter:brightness(1.12)}
   .btn-primary:active:not(:disabled){transform:translateY(1px)}
+
+  .bg-glow{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+  .bg-glow span{position:absolute;border-radius:9999px;filter:blur(90px);opacity:.16}
+  .bg-glow span:nth-child(1){width:32rem;height:32rem;top:-10rem;left:-8rem;background:#3b82f6;animation:drift1 22s ease-in-out infinite}
+  .bg-glow span:nth-child(2){width:26rem;height:26rem;bottom:-8rem;right:-6rem;background:#6366f1;animation:drift2 26s ease-in-out infinite}
+  @keyframes drift1{0%,100%{transform:translate(0,0)}50%{transform:translate(3rem,2rem)}}
+  @keyframes drift2{0%,100%{transform:translate(0,0)}50%{transform:translate(-2.5rem,-2rem)}}
+
+  @keyframes fadeInUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  .fade-in{animation:fadeInUp .45s cubic-bezier(.16,1,.3,1) both}
+
+  @keyframes viewFadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .view-anim{animation:viewFadeIn .25s ease both}
+
+  .toast-enter-active{transition:opacity .25s ease, transform .25s ease}
+  .toast-leave-active{transition:opacity .2s ease, transform .2s ease}
+  .toast-enter-from{opacity:0;transform:translateX(20px)}
+  .toast-leave-to{opacity:0;transform:translateX(20px)}
+
+  @keyframes modalFadeIn{from{opacity:0}to{opacity:1}}
+  .modal-overlay-anim{animation:modalFadeIn .15s ease both}
+  @keyframes modalPop{from{opacity:0;transform:scale(.97) translateY(6px)}to{opacity:1;transform:none}}
+  .modal-panel-anim{animation:modalPop .2s cubic-bezier(.16,1,.3,1) both}
+
+  .dropzone{border:1.5px dashed #334155;transition:border-color .15s ease, background-color .15s ease}
+  .dropzone:hover{border-color:#475569;background:rgba(255,255,255,.02)}
+  .dropzone.dragover{border-color:#3b82f6;background:rgba(59,130,246,.06)}
+
+  .row-expand-enter-active,.row-expand-leave-active{transition:opacity .15s ease}
+  .row-expand-enter-from,.row-expand-leave-to{opacity:0}
 </style>
 <script>tailwind.config={darkMode:'class',theme:{extend:{fontFamily:{sans:['Inter','ui-sans-serif','system-ui','sans-serif']}}}}</script>
 </head>
 <body class="bg-slate-950 text-slate-200 font-sans antialiased">
-<div id="app" v-cloak class="flex h-screen overflow-hidden">
+<div id="app" v-cloak class="flex h-screen overflow-hidden relative">
+
+  <div class="bg-glow"><span></span><span></span></div>
+
+  <!-- TOASTS -->
+  <div class="fixed top-5 right-5 z-50 flex flex-col gap-2 w-80">
+    <transition-group name="toast">
+      <div v-for="t in toasts" :key="t.id"
+        :class="['rounded-xl px-4 py-3 shadow-lg border text-sm font-medium flex items-start gap-2.5 backdrop-blur',
+          t.type==='success' ? 'bg-green-500/10 border-green-500/30 text-green-300'
+          : t.type==='error' ? 'bg-red-500/10 border-red-500/30 text-red-300'
+          : 'bg-blue-500/10 border-blue-500/30 text-blue-300']">
+        <span>{{ t.type==='success' ? '✓' : t.type==='error' ? '✕' : 'ℹ' }}</span>
+        <span class="flex-1 leading-snug">{{ t.message }}</span>
+        <span @click="dismissToast(t.id)" class="cursor-pointer opacity-60 hover:opacity-100">✕</span>
+      </div>
+    </transition-group>
+  </div>
+
+  <!-- RUN DETAIL MODAL -->
+    <div v-if="selectedRun" @click.self="selectedRun = null" class="modal-overlay-anim fixed inset-0 z-40 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6">
+        <div class="modal-panel-anim bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl max-h-[85vh] overflow-y-auto shadow-2xl">
+          <div class="sticky top-0 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-6 py-4 flex items-center justify-between">
+            <div>
+              <div class="font-bold text-white text-lg">Run #{{ selectedRun.id }}</div>
+              <div class="text-sm text-slate-500">{{ selectedRun.created_at }}</div>
+            </div>
+            <button @click="selectedRun = null" class="text-slate-400 hover:text-white text-xl leading-none">✕</button>
+          </div>
+          <div class="p-6 space-y-4">
+            <div v-if="selectedRun.client_text" class="bg-slate-800/60 border border-slate-800 rounded-xl p-4">
+              <div class="text-sm font-semibold text-slate-400 mb-1.5">Client brief</div>
+              <div class="text-base text-slate-300">{{ selectedRun.client_text }}</div>
+            </div>
+            <div v-if="selectedRun.pm">
+              <div class="flex items-center justify-between mb-2">
+                <div class="font-bold text-white text-base">Agent 1 output</div>
+                <button @click="copyJson(selectedRun.pm)" class="text-xs px-2.5 py-1 rounded-md bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-700">⧉ Copy JSON</button>
+              </div>
+              <pre class="bg-slate-950 border border-slate-800 rounded-xl p-4 text-xs text-slate-400 overflow-x-auto">{{ JSON.stringify(selectedRun.pm, null, 2) }}</pre>
+            </div>
+            <div v-if="selectedRun.sa">
+              <div class="flex items-center justify-between mb-2">
+                <div class="font-bold text-white text-base">Agent 2 output</div>
+                <button @click="copyJson(selectedRun.sa)" class="text-xs px-2.5 py-1 rounded-md bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-700">⧉ Copy JSON</button>
+              </div>
+              <pre class="bg-slate-950 border border-slate-800 rounded-xl p-4 text-xs text-slate-400 overflow-x-auto">{{ JSON.stringify(selectedRun.sa, null, 2) }}</pre>
+            </div>
+          </div>
+        </div>
+    </div>
 
   <!-- SIDEBAR -->
-  <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0">
+  <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 relative z-10">
     <div class="p-5 border-b border-slate-800">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-950/50 flex items-center justify-center font-bold text-white text-base">Pb</div>
@@ -47,7 +128,7 @@
         :class="['flex items-center gap-3 px-3.5 py-3 rounded-xl cursor-pointer select-none transition-all text-base border-l-2',
           activeView === item.id
             ? 'bg-blue-600/15 text-blue-300 border-blue-500'
-            : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-200 border-transparent']">
+            : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-200 hover:translate-x-0.5 border-transparent']">
         <span class="text-lg w-5 text-center">{{ item.icon }}</span>
         <span class="font-medium flex-1">{{ item.label }}</span>
       </div>
@@ -63,7 +144,7 @@
   </aside>
 
   <!-- MAIN -->
-  <div class="flex-1 flex flex-col overflow-hidden">
+  <div class="flex-1 flex flex-col overflow-hidden relative z-10">
     <header class="shrink-0 bg-slate-950/90 backdrop-blur border-b border-slate-800 px-8 py-5 flex items-center justify-between">
       <div>
         <h1 class="text-xl font-bold text-white tracking-tight">{{ currentNav.label }}</h1>
@@ -80,37 +161,38 @@
     <main class="flex-1 overflow-y-auto p-8">
 
       <!-- ═══════════ DASHBOARD ═══════════ -->
-      <div v-if="activeView === 'dashboard'">
+      <div v-if="activeView === 'dashboard'" key="dashboard" class="view-anim">
         <div class="grid grid-cols-4 gap-4 mb-8">
-          <div class="card bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+          <div class="card card-lift fade-in bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm" style="animation-delay:0ms">
             <div class="w-11 h-11 rounded-xl bg-blue-500/10 flex items-center justify-center text-xl mb-3">🧪</div>
             <div class="text-3xl font-bold text-white mb-0.5 tracking-tight">{{ stats.total_runs }}</div>
             <div class="text-sm text-slate-500">Total pipeline runs</div>
           </div>
-          <div class="card bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+          <div class="card card-lift fade-in bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm" style="animation-delay:60ms">
             <div class="w-11 h-11 rounded-xl bg-green-500/10 flex items-center justify-center text-xl mb-3">✅</div>
             <div class="text-3xl font-bold text-white mb-0.5 tracking-tight">{{ stats.passed }}</div>
             <div class="text-sm text-slate-500">Handoffs passed</div>
           </div>
-          <div class="card bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+          <div class="card card-lift fade-in bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm" style="animation-delay:120ms">
             <div class="w-11 h-11 rounded-xl bg-red-500/10 flex items-center justify-center text-xl mb-3">🚫</div>
             <div class="text-3xl font-bold text-white mb-0.5 tracking-tight">{{ stats.blocked }}</div>
             <div class="text-sm text-slate-500">Handoffs blocked</div>
           </div>
-          <div class="card bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+          <div class="card card-lift fade-in bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm" style="animation-delay:180ms">
             <div class="w-11 h-11 rounded-xl bg-indigo-500/10 flex items-center justify-center text-xl mb-3">📋</div>
             <div class="text-3xl font-bold text-white mb-0.5 tracking-tight">{{ stats.audit_entries }}</div>
             <div class="text-sm text-slate-500">Audit log entries</div>
           </div>
         </div>
 
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm">
+        <div class="fade-in bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm" style="animation-delay:240ms">
           <div class="flex items-center justify-between mb-5">
             <div class="font-bold text-white text-base tracking-tight">Recent runs</div>
             <button @click="activeView='pipeline'" class="btn-primary text-sm font-semibold px-4 py-2 rounded-lg bg-blue-600 text-white shadow-md shadow-blue-950/40">+ New run</button>
           </div>
           <div v-if="runs.length === 0" class="text-base text-slate-500 py-10 text-center">No runs yet — start one from the Pipeline tab.</div>
-          <div v-for="r in runs" :key="r.id" class="flex items-center justify-between py-3.5 border-b border-slate-800/50 last:border-0">
+          <div v-for="r in runs" :key="r.id" @click="openRun(r.id)"
+            class="flex items-center justify-between py-3.5 border-b border-slate-800/50 last:border-0 cursor-pointer hover:bg-slate-800/30 rounded-lg px-2 -mx-2 transition-colors">
             <div>
               <div class="text-base text-slate-200 font-medium">Run #{{ r.id }} — {{ (r.client_text || '(no brief text)').slice(0,70) }}{{ r.client_text && r.client_text.length>70 ? '…' : '' }}</div>
               <div class="text-sm text-slate-500 mt-0.5">{{ r.created_at }} · {{ r.parameter_count }} parameter(s) · confidence: {{ r.confidence || '—' }}</div>
@@ -125,11 +207,11 @@
       </div>
 
       <!-- ═══════════ PIPELINE ═══════════ -->
-      <div v-if="activeView === 'pipeline'">
+      <div v-else-if="activeView === 'pipeline'" key="pipeline" class="view-anim">
 
         <!-- Agent config -->
         <div class="grid grid-cols-2 gap-5 mb-6">
-          <div class="card bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+          <div class="card fade-in bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
             <div class="flex items-center justify-between mb-4">
               <div class="font-bold text-white text-base flex items-center gap-2"><span class="text-lg">🧠</span> Agent 1 — Product Manager</div>
               <span :class="['text-xs px-2.5 py-1 rounded-full font-semibold', a1.configured ? 'bg-green-500/15 text-green-400' : 'bg-red-500/15 text-red-400']">
@@ -144,7 +226,7 @@
               <option v-for="m in a1.models" :key="m" :value="m"></option>
             </datalist>
           </div>
-          <div class="card bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+          <div class="card fade-in bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm" style="animation-delay:60ms">
             <div class="flex items-center justify-between mb-4">
               <div class="font-bold text-white text-base flex items-center gap-2"><span class="text-lg">⚙</span> Agent 2 — Solution Architect</div>
               <span :class="['text-xs px-2.5 py-1 rounded-full font-semibold', a2.configured ? 'bg-green-500/15 text-green-400' : 'bg-red-500/15 text-red-400']">
@@ -162,18 +244,36 @@
         </div>
 
         <!-- Inputs -->
-        <div class="card bg-slate-900 border border-slate-800 rounded-2xl p-5 mb-6 shadow-sm">
+        <div class="card fade-in bg-slate-900 border border-slate-800 rounded-2xl p-5 mb-6 shadow-sm" style="animation-delay:120ms">
           <div class="font-bold text-white text-base mb-4">Agent 1 inputs</div>
           <div class="grid grid-cols-3 gap-5">
             <div>
               <label class="text-sm text-slate-500 font-medium">1. Pilot report (.pdf)</label>
-              <input type="file" accept=".pdf" @change="e => pilotReportFile = e.target.files[0]"
-                class="w-full mt-1.5 text-sm text-slate-400 file:mr-3 file:py-2 file:px-3.5 file:rounded-lg file:border-0 file:bg-slate-800 file:text-slate-300 file:text-sm file:font-medium" />
+              <div class="dropzone rounded-xl p-4 mt-1.5 text-center cursor-pointer" :class="{dragover: dragState.pilot}"
+                @click="$refs.pilotInput.click()"
+                @dragover.prevent="dragState.pilot = true" @dragleave.prevent="dragState.pilot = false"
+                @drop.prevent="dragState.pilot = false; onDropFile($event, 'pilotReportFile')">
+                <input ref="pilotInput" type="file" accept=".pdf" class="hidden" @change="e => pilotReportFile = e.target.files[0] || null" />
+                <div v-if="!pilotReportFile" class="text-sm text-slate-500">📄 Drop PDF or click to browse</div>
+                <div v-else class="flex items-center justify-between gap-2 text-sm">
+                  <span class="text-slate-300 truncate">📄 {{ pilotReportFile.name }}</span>
+                  <span @click.stop="pilotReportFile = null" class="text-slate-500 hover:text-red-400 shrink-0">✕</span>
+                </div>
+              </div>
             </div>
             <div>
               <label class="text-sm text-slate-500 font-medium">2. Lab notes / ELN export (.pdf, .jpg, .png, .txt, .csv)</label>
-              <input type="file" accept=".pdf,.jpg,.jpeg,.png,.txt,.csv" @change="e => labNotesFile = e.target.files[0]"
-                class="w-full mt-1.5 text-sm text-slate-400 file:mr-3 file:py-2 file:px-3.5 file:rounded-lg file:border-0 file:bg-slate-800 file:text-slate-300 file:text-sm file:font-medium" />
+              <div class="dropzone rounded-xl p-4 mt-1.5 text-center cursor-pointer" :class="{dragover: dragState.lab}"
+                @click="$refs.labInput.click()"
+                @dragover.prevent="dragState.lab = true" @dragleave.prevent="dragState.lab = false"
+                @drop.prevent="dragState.lab = false; onDropFile($event, 'labNotesFile')">
+                <input ref="labInput" type="file" accept=".pdf,.jpg,.jpeg,.png,.txt,.csv" class="hidden" @change="e => labNotesFile = e.target.files[0] || null" />
+                <div v-if="!labNotesFile" class="text-sm text-slate-500">🧪 Drop file or click to browse</div>
+                <div v-else class="flex items-center justify-between gap-2 text-sm">
+                  <span class="text-slate-300 truncate">🧪 {{ labNotesFile.name }}</span>
+                  <span @click.stop="labNotesFile = null" class="text-slate-500 hover:text-red-400 shrink-0">✕</span>
+                </div>
+              </div>
             </div>
             <div>
               <label class="text-sm text-slate-500 font-medium">3. Vague client text</label>
@@ -192,25 +292,30 @@
         </div>
 
         <!-- Progress stepper -->
-        <div v-if="running || pm" class="card bg-slate-900 border border-slate-800 rounded-2xl px-6 py-5 mb-6 shadow-sm">
+        <div v-if="running || pm" class="card fade-in bg-slate-900 border border-slate-800 rounded-2xl px-6 py-5 mb-6 shadow-sm">
           <div class="flex items-center">
             <template v-for="(s,i) in steps" :key="s">
               <div class="flex flex-col items-center gap-2 shrink-0">
                 <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all"
-                  :class="i < stepIdx ? 'bg-blue-600 border-blue-600 text-white' : i === stepIdx ? 'border-blue-500 text-blue-400 bg-blue-500/10' : 'border-slate-700 text-slate-600'">
+                  :class="i < stepIdx ? 'bg-blue-600 border-blue-600 text-white' : i === stepIdx ? 'border-blue-500 text-blue-400 bg-blue-500/10 animate-pulse' : 'border-slate-700 text-slate-600'">
                   <span v-if="i < stepIdx">✓</span><span v-else>{{ i + 1 }}</span>
                 </div>
                 <span class="text-sm font-medium whitespace-nowrap" :class="i <= stepIdx ? 'text-blue-300' : 'text-slate-600'">{{ s }}</span>
               </div>
-              <div v-if="i < steps.length - 1" class="flex-1 h-0.5 mx-3 rounded" :class="i < stepIdx ? 'bg-blue-600' : 'bg-slate-800'"></div>
+              <div v-if="i < steps.length - 1" class="flex-1 h-0.5 mx-3 rounded overflow-hidden bg-slate-800">
+                <div class="bar-fill h-full bg-blue-600" :style="{width: i < stepIdx ? '100%' : '0%'}"></div>
+              </div>
             </template>
           </div>
         </div>
 
         <!-- Results -->
         <div v-if="pm || sa" class="grid grid-cols-2 gap-6">
-          <div class="card bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
-            <div class="font-bold text-white text-base mb-3.5">Agent 1 — Product Manager</div>
+          <div class="card fade-in bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+            <div class="flex items-center justify-between mb-3.5">
+              <div class="font-bold text-white text-base">Agent 1 — Product Manager</div>
+              <button v-if="pm" @click="copyJson(pm)" class="text-xs px-2.5 py-1 rounded-md bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-700">⧉ Copy JSON</button>
+            </div>
             <div v-if="pm">
               <span :class="['text-sm px-3 py-1 rounded-full font-semibold',
                 pm.confidence==='Complete'?'bg-green-500/15 text-green-400'
@@ -242,8 +347,11 @@
             <div v-else class="text-base text-slate-500 py-10 text-center">Awaiting pipeline run</div>
           </div>
 
-          <div class="card bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
-            <div class="font-bold text-white text-base mb-3.5">Agent 2 — Solution Architect</div>
+          <div class="card fade-in bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm" style="animation-delay:60ms">
+            <div class="flex items-center justify-between mb-3.5">
+              <div class="font-bold text-white text-base">Agent 2 — Solution Architect</div>
+              <button v-if="sa" @click="copyJson(sa)" class="text-xs px-2.5 py-1 rounded-md bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-700">⧉ Copy JSON</button>
+            </div>
             <div v-if="sa">
               <div v-if="sa.handoff_status === 'BLOCKED'" class="bg-red-500/10 border border-red-500/20 rounded-xl p-3.5 mb-3.5">
                 <div class="text-sm font-semibold text-red-400 mb-1.5">✗ Handoff blocked — no design generated</div>
@@ -276,7 +384,7 @@
       </div>
 
       <!-- ═══════════ AUDIT LOGS ═══════════ -->
-      <div v-if="activeView === 'audit'">
+      <div v-else-if="activeView === 'audit'" key="audit" class="view-anim">
         <div class="flex items-center gap-3 mb-6 flex-wrap">
           <select v-model="auditFilter" @change="loadAudit"
             class="text-base bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-300 focus:outline-none focus:border-blue-500">
@@ -292,7 +400,7 @@
           <span class="ml-auto text-sm text-slate-500">{{ auditLogs.length }} entries</span>
         </div>
 
-        <div class="card bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+        <div class="card fade-in bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
           <table class="w-full text-base">
             <thead>
               <tr class="border-b border-slate-800">
@@ -306,20 +414,26 @@
             </thead>
             <tbody>
               <tr v-if="auditLogs.length === 0"><td colspan="6" class="px-5 py-12 text-center text-slate-500 text-base">No entries match the current filter</td></tr>
-              <tr v-for="e in auditLogs" :key="e.id" class="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
-                <td class="px-5 py-4 font-mono text-sm text-slate-400 whitespace-nowrap">{{ e.timestamp }}</td>
-                <td class="px-5 py-4 text-sm text-slate-400">#{{ e.run_id }}</td>
-                <td class="px-5 py-4 whitespace-nowrap"><span class="text-sm px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 font-medium">{{ e.agent }}</span></td>
-                <td class="px-5 py-4 text-base text-slate-200">{{ e.event }}</td>
-                <td class="px-5 py-4 text-sm text-slate-500 max-w-xs truncate" :title="e.detail">{{ e.detail }}</td>
-                <td class="px-5 py-4 whitespace-nowrap">
-                  <span :class="['text-sm px-3 py-1 rounded-full font-semibold',
-                    e.status==='PASS'?'bg-green-500/15 text-green-400'
-                    :e.status==='BLOCK'||e.status==='ERROR'?'bg-red-500/15 text-red-400'
-                    :e.status==='WARN'?'bg-yellow-500/15 text-yellow-400'
-                    :'bg-blue-500/15 text-blue-400']">{{ e.status }}</span>
-                </td>
-              </tr>
+              <template v-for="e in auditLogs" :key="e.id">
+                <tr @click="expandedLogId = expandedLogId === e.id ? null : e.id"
+                  class="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors cursor-pointer">
+                  <td class="px-5 py-4 font-mono text-sm text-slate-400 whitespace-nowrap">{{ e.timestamp }}</td>
+                  <td class="px-5 py-4 text-sm text-slate-400">#{{ e.run_id }}</td>
+                  <td class="px-5 py-4 whitespace-nowrap"><span class="text-sm px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 font-medium">{{ e.agent }}</span></td>
+                  <td class="px-5 py-4 text-base text-slate-200">{{ e.event }}</td>
+                  <td class="px-5 py-4 text-sm text-slate-500 max-w-xs truncate">{{ e.detail }}</td>
+                  <td class="px-5 py-4 whitespace-nowrap">
+                    <span :class="['text-sm px-3 py-1 rounded-full font-semibold',
+                      e.status==='PASS'?'bg-green-500/15 text-green-400'
+                      :e.status==='BLOCK'||e.status==='ERROR'?'bg-red-500/15 text-red-400'
+                      :e.status==='WARN'?'bg-yellow-500/15 text-yellow-400'
+                      :'bg-blue-500/15 text-blue-400']">{{ e.status }}</span>
+                  </td>
+                </tr>
+                <tr v-if="expandedLogId === e.id" class="bg-slate-950/60 border-b border-slate-800/50">
+                  <td colspan="6" class="px-5 py-3.5 text-sm text-slate-300 leading-relaxed">{{ e.detail || '(no additional detail)' }}</td>
+                </tr>
+              </template>
             </tbody>
           </table>
         </div>
@@ -353,6 +467,7 @@ createApp({
       ],
       stats: { total_runs:0, passed:0, blocked:0, errored:0, audit_entries:0, pass_rate:0 },
       runs: [],
+      selectedRun: null,
 
       a1: { model:'', base_url:'', models:[], live:false, configured:false },
       a2: { model:'', base_url:'', models:[], live:false, configured:false },
@@ -360,6 +475,7 @@ createApp({
       clientText: '',
       pilotReportFile: null,
       labNotesFile: null,
+      dragState: { pilot:false, lab:false },
 
       running: false,
       runError: '',
@@ -371,6 +487,10 @@ createApp({
       auditFilter: '',
       auditAgent: '',
       auditLogs: [],
+      expandedLogId: null,
+
+      toasts: [],
+      toastSeq: 0,
     };
   },
   computed: {
@@ -383,6 +503,35 @@ createApp({
     },
   },
   methods: {
+    addToast(type, message, ms = 4000) {
+      const id = ++this.toastSeq;
+      this.toasts.push({ id, type, message });
+      setTimeout(() => this.dismissToast(id), ms);
+    },
+    dismissToast(id) {
+      this.toasts = this.toasts.filter(t => t.id !== id);
+    },
+    async copyJson(obj) {
+      try {
+        await navigator.clipboard.writeText(JSON.stringify(obj, null, 2));
+        this.addToast('success', 'Copied JSON to clipboard');
+      } catch (e) {
+        this.addToast('error', 'Could not copy — clipboard access denied');
+      }
+    },
+    onDropFile(e, target) {
+      const file = e.dataTransfer?.files?.[0];
+      if (file) this[target] = file;
+    },
+    async openRun(id) {
+      try {
+        const res = await fetch(`${API}/runs/${id}`);
+        if (!res.ok) throw new Error('Run not found');
+        this.selectedRun = await res.json();
+      } catch (e) {
+        this.addToast('error', 'Could not load run details');
+      }
+    },
     async loadAgentStatus() {
       try {
         const res = await fetch(`${API}/agents/status`);
@@ -433,6 +582,7 @@ createApp({
       this.resetPipeline();
       if (!this.a1.configured || !this.a2.configured) {
         this.runError = 'Server is missing an API key for Agent 1 and/or Agent 2 — set AGENT1_API_KEY / AGENT2_API_KEY in the backend .env file.';
+        this.addToast('error', this.runError);
         return;
       }
       this.running = true;
@@ -451,8 +601,14 @@ createApp({
         this.validation = data.validation;
         this.sa = data.sa;
         this.loadDashboard();
+        if (data.sa?.handoff_status === 'BLOCKED') {
+          this.addToast('error', 'Handoff blocked at validation — see Agent 2 panel for reasons');
+        } else {
+          this.addToast('success', 'Pipeline complete — handoff passed');
+        }
       } catch (e) {
         this.runError = String(e.message || e);
+        this.addToast('error', this.runError);
       } finally {
         this.running = false;
       }
