@@ -183,9 +183,17 @@ def call_agent(config: AgentConfig, system: str, user_content: str) -> str:
 
 def _repair_json(text: str) -> str:
     """Fix the handful of formatting slips LLMs commonly make in otherwise-
-    valid JSON: trailing commas before a closing bracket/brace."""
+    valid JSON."""
     import re
-    return re.sub(r",\s*([\]}])", r"\1", text)
+    # Trailing commas before a closing bracket/brace.
+    text = re.sub(r",\s*([\]}])", r"\1", text)
+    # A bare string wrapped in braces instead of just the string — happens
+    # when a model puts each item of a string array (e.g. open_questions,
+    # risk_flags, block_reasons) in its own object: { "text" } instead of
+    # "text". An object needs "key": value, so a lone string has no colon
+    # and fails to parse; unwrap it back to a plain string.
+    text = re.sub(r'\{\s*("(?:[^"\\]|\\.)*")\s*\}', r'\1', text)
+    return text
 
 
 # ──────────────────────────────────────────────
