@@ -28,7 +28,7 @@ from agents import (  # noqa: E402
 from schemas import AgentConfig, SAOutput  # noqa: E402
 from validation import validate_handoff  # noqa: E402
 
-from backend import db  # noqa: E402
+from backend import config, db  # noqa: E402
 
 FRONTEND_DIR = ROOT_DIR / "frontend"
 
@@ -51,11 +51,24 @@ def on_startup():
 # Pipeline
 # ──────────────────────────────────────────────
 
+@app.get("/api/agents/status")
+def get_agents_status():
+    """Whether each agent has a server-side API key configured. Never
+    returns the key itself — the browser only needs to know yes/no."""
+    return {
+        "a1": {"configured": config.is_configured("a1"), "base_url": config.AGENTS["a1"]["base_url"]},
+        "a2": {"configured": config.is_configured("a2"), "base_url": config.AGENTS["a2"]["base_url"]},
+    }
+
+
 @app.get("/api/models")
-def get_models(base_url: str = "https://openrouter.ai/api/v1/chat/completions", api_key: str = ""):
-    """Live model catalog for the given endpoint. Falls back to the static
-    OPEN_SOURCE_MODELS list if the endpoint can't be reached (e.g. no key
-    entered yet, or an offline/custom endpoint)."""
+def get_models(agent: str):
+    """Live model catalog for the given agent's configured endpoint/key.
+    Falls back to the static OPEN_SOURCE_MODELS list if the endpoint can't
+    be reached, or if that agent has no key configured yet."""
+    if agent not in ("a1", "a2"):
+        raise HTTPException(status_code=400, detail="agent must be 'a1' or 'a2'")
+    api_key, base_url = config.get_credentials(agent)
     try:
         return {"models": fetch_available_models(base_url, api_key), "live": True}
     except AgentError:
@@ -65,15 +78,17 @@ def get_models(base_url: str = "https://openrouter.ai/api/v1/chat/completions", 
 @app.post("/api/pipeline/run")
 async def run_pipeline(
     client_text: str = Form(""),
-    a1_key: str = Form(...),
     a1_model: str = Form(...),
-    a1_base_url: str = Form("https://openrouter.ai/api/v1/chat/completions"),
-    a2_key: str = Form(...),
     a2_model: str = Form(...),
-    a2_base_url: str = Form("https://openrouter.ai/api/v1/chat/completions"),
     pilot_report: Optional[UploadFile] = File(None),
     lab_notes: Optional[UploadFile] = File(None),
 ):
+    if not config.is_configured("a1") or not config.is_configured("a2"):
+        raise HTTPException(
+            status_code=503,
+            detail="Server is missing AGENT1_API_KEY / AGENT2_API_KEY — set them in the backend's .env file.",
+        )
+
     pilot_report_text = ""
     lab_notes_text = ""
     pilot_report_filename = pilot_report.filename if pilot_report else None
@@ -91,6 +106,8 @@ async def run_pipeline(
             lab_notes_text = extract_lab_notes_text(await lab_notes.read(), lab_notes_filename)
             db.add_audit_entry(run_id, "System", "Lab notes parsed", lab_notes_filename, "INFO")
 
+        a1_key, a1_base_url = config.get_credentials("a1")
+        a2_key, a2_base_url = config.get_credentials("a2")
         a1_config = AgentConfig(api_key=a1_key, model=a1_model, base_url=a1_base_url)
         a2_config = AgentConfig(api_key=a2_key, model=a2_model, base_url=a2_base_url)
 
