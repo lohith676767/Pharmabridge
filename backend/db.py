@@ -95,8 +95,13 @@ def get_conn() -> Iterator:
 
         conn = psycopg.connect(DATABASE_URL, row_factory=dict_row)
     else:
-        conn = sqlite3.connect(DB_PATH)
+        # The pipeline now runs on a worker thread while progress polls read
+        # concurrently, so wait for the write lock instead of failing fast,
+        # and use WAL so readers are not blocked by the in-flight writer.
+        conn = sqlite3.connect(DB_PATH, timeout=15)
         conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA busy_timeout=15000")
     try:
         yield conn
         conn.commit()

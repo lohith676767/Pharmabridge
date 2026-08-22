@@ -13,6 +13,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.concurrency import run_in_threadpool
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT_DIR))  # so `import agents/schemas/validation` at repo root resolves
@@ -79,21 +80,47 @@ async def run_pipeline(
     pilot_report: Optional[UploadFile] = File(None),
     lab_notes: Optional[UploadFile] = File(None),
 ):
+    """Read the uploads on the event loop, then hand the pipeline itself to
+    a worker thread.
+
+    The agent calls are blocking network I/O. Running them directly inside
+    this ``async def`` would occupy the event loop for the whole run, so the
+    server could not answer the progress polls that the live console
+    depends on — the console would sit at stage one and every event would
+    arrive at once when the run finished.
+    """
+    pilot_bytes = await pilot_report.read() if pilot_report is not None else None
+    lab_bytes = await lab_notes.read() if lab_notes is not None else None
+
+    return await run_in_threadpool(
+        _execute_pipeline,
+        client_text=client_text,
+        a1_key=a1_key, a1_model=a1_model, a1_base_url=a1_base_url,
+        a2_key=a2_key, a2_model=a2_model, a2_base_url=a2_base_url,
+        pilot_bytes=pilot_bytes,
+        pilot_report_filename=pilot_report.filename if pilot_report is not None else None,
+        lab_bytes=lab_bytes,
+        lab_notes_filename=lab_notes.filename if lab_notes is not None else None,
+    )
+
+
+def _execute_pipeline(
+    *, client_text, a1_key, a1_model, a1_base_url, a2_key, a2_model, a2_base_url,
+    pilot_bytes, pilot_report_filename, lab_bytes, lab_notes_filename,
+):
     pilot_report_text = ""
     lab_notes_text = ""
-    pilot_report_filename = pilot_report.filename if pilot_report else None
-    lab_notes_filename = lab_notes.filename if lab_notes else None
 
     run_id = db.create_run(client_text, pilot_report_filename, lab_notes_filename)
     db.add_audit_entry(run_id, "System", "Pipeline run started", f"client_text_len={len(client_text)}", "INFO")
 
     try:
-        if pilot_report is not None:
-            pilot_report_text = extract_pdf_text(await pilot_report.read())
+        if pilot_bytes is not None:
+            pilot_report_text = extract_pdf_text(pilot_bytes)
             db.add_audit_entry(run_id, "System", "Pilot report parsed", pilot_report_filename, "INFO")
 
-        if lab_notes is not None:
-            lab_notes_text = extract_lab_notes_text(await lab_notes.read(), lab_notes_filename)
+        if lab_bytes is not None:
+            lab_notes_text = extract_lab_notes_text(lab_bytes, lab_notes_filename)
             db.add_audit_entry(run_id, "System", "Lab notes parsed", lab_notes_filename, "INFO")
 
         a1_config = AgentConfig(api_key=a1_key, model=a1_model, base_url=a1_base_url)
