@@ -1,7 +1,6 @@
 fastapi>=0.111
 uvicorn[standard]>=0.30
 python-multipart>=0.0.9
-python-dotenv>=1.0
 streamlit>=1.36
 requests>=2.31
 pydantic>=2.6

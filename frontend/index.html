@@ -212,34 +212,30 @@
         <!-- Agent config -->
         <div class="grid grid-cols-2 gap-5 mb-6">
           <div class="card fade-in bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
-            <div class="flex items-center justify-between mb-4">
-              <div class="font-bold text-white text-base flex items-center gap-2"><span class="text-lg">🧠</span> Agent 1 — Product Manager</div>
-              <span :class="['text-xs px-2.5 py-1 rounded-full font-semibold', a1.configured ? 'bg-green-500/15 text-green-400' : 'bg-red-500/15 text-red-400']">
-                {{ a1.configured ? '✓ Key configured' : '✗ No key set' }}
-              </span>
-            </div>
-            <p class="text-sm text-slate-500 mb-3.5">Endpoint: <span class="font-mono text-slate-400">{{ a1.base_url }}</span> — key is held server-side, never sent to the browser.</p>
-            <label class="text-sm text-slate-500 font-medium">Model <span v-if="a1.live" class="text-green-400">(live catalog)</span><span v-else class="text-yellow-400">(fallback list — check server key)</span></label>
+            <div class="font-bold text-white text-base mb-4 flex items-center gap-2"><span class="text-lg">🧠</span> Agent 1 — Product Manager</div>
+            <label class="text-sm text-slate-500 font-medium">API key</label>
+            <input v-model="a1.key" @blur="refreshModels('a1')" type="password" placeholder="sk-..." class="w-full mb-3.5 mt-1.5 text-base bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40" />
+            <label class="text-sm text-slate-500 font-medium">Model <span v-if="a1.live" class="text-green-400">(live catalog)</span><span v-else class="text-yellow-400">(fallback list — check endpoint/key)</span></label>
             <input v-model="a1.model" list="a1-models" placeholder="type or pick a model id"
-              class="w-full mt-1.5 text-base bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40" />
+              class="w-full mb-3.5 mt-1.5 text-base bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40" />
             <datalist id="a1-models">
               <option v-for="m in a1.models" :key="m" :value="m"></option>
             </datalist>
+            <label class="text-sm text-slate-500 font-medium">Endpoint (OpenAI-compatible)</label>
+            <input v-model="a1.base_url" @blur="refreshModels('a1')" class="w-full mt-1.5 text-base bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40" />
           </div>
           <div class="card fade-in bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm" style="animation-delay:60ms">
-            <div class="flex items-center justify-between mb-4">
-              <div class="font-bold text-white text-base flex items-center gap-2"><span class="text-lg">⚙</span> Agent 2 — Solution Architect</div>
-              <span :class="['text-xs px-2.5 py-1 rounded-full font-semibold', a2.configured ? 'bg-green-500/15 text-green-400' : 'bg-red-500/15 text-red-400']">
-                {{ a2.configured ? '✓ Key configured' : '✗ No key set' }}
-              </span>
-            </div>
-            <p class="text-sm text-slate-500 mb-3.5">Endpoint: <span class="font-mono text-slate-400">{{ a2.base_url }}</span> — key is held server-side, never sent to the browser.</p>
-            <label class="text-sm text-slate-500 font-medium">Model <span v-if="a2.live" class="text-green-400">(live catalog)</span><span v-else class="text-yellow-400">(fallback list — check server key)</span></label>
+            <div class="font-bold text-white text-base mb-4 flex items-center gap-2"><span class="text-lg">⚙</span> Agent 2 — Solution Architect</div>
+            <label class="text-sm text-slate-500 font-medium">API key</label>
+            <input v-model="a2.key" @blur="refreshModels('a2')" type="password" placeholder="sk-..." class="w-full mb-3.5 mt-1.5 text-base bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40" />
+            <label class="text-sm text-slate-500 font-medium">Model <span v-if="a2.live" class="text-green-400">(live catalog)</span><span v-else class="text-yellow-400">(fallback list — check endpoint/key)</span></label>
             <input v-model="a2.model" list="a2-models" placeholder="type or pick a model id"
-              class="w-full mt-1.5 text-base bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40" />
+              class="w-full mb-3.5 mt-1.5 text-base bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40" />
             <datalist id="a2-models">
               <option v-for="m in a2.models" :key="m" :value="m"></option>
             </datalist>
+            <label class="text-sm text-slate-500 font-medium">Endpoint (OpenAI-compatible)</label>
+            <input v-model="a2.base_url" @blur="refreshModels('a2')" class="w-full mt-1.5 text-base bg-slate-800 border border-slate-700 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40" />
           </div>
         </div>
 
@@ -469,8 +465,8 @@ createApp({
       runs: [],
       selectedRun: null,
 
-      a1: { model:'', base_url:'', models:[], live:false, configured:false },
-      a2: { model:'', base_url:'', models:[], live:false, configured:false },
+      a1: { key:'', model:'', base_url:'https://openrouter.ai/api/v1/chat/completions', models:[], live:false },
+      a2: { key:'', model:'', base_url:'https://openrouter.ai/api/v1/chat/completions', models:[], live:false },
 
       clientText: '',
       pilotReportFile: null,
@@ -532,20 +528,11 @@ createApp({
         this.addToast('error', 'Could not load run details');
       }
     },
-    async loadAgentStatus() {
-      try {
-        const res = await fetch(`${API}/agents/status`);
-        const data = await res.json();
-        this.a1.configured = data.a1.configured;
-        this.a1.base_url = data.a1.base_url;
-        this.a2.configured = data.a2.configured;
-        this.a2.base_url = data.a2.base_url;
-      } catch (e) { /* leave defaults */ }
-    },
     async refreshModels(which) {
       const agent = this[which];
       try {
-        const res = await fetch(`${API}/models?agent=${which}`);
+        const params = new URLSearchParams({ base_url: agent.base_url, api_key: agent.key || '' });
+        const res = await fetch(`${API}/models?${params.toString()}`);
         const data = await res.json();
         agent.models = data.models;
         agent.live = data.live;
@@ -580,16 +567,20 @@ createApp({
     },
     async runPipeline() {
       this.resetPipeline();
-      if (!this.a1.configured || !this.a2.configured) {
-        this.runError = 'Server is missing an API key for Agent 1 and/or Agent 2 — set AGENT1_API_KEY / AGENT2_API_KEY in the backend .env file.';
+      if (!this.a1.key || !this.a2.key) {
+        this.runError = 'Both Agent 1 and Agent 2 API keys are required.';
         this.addToast('error', this.runError);
         return;
       }
       this.running = true;
       const form = new FormData();
       form.append('client_text', this.clientText);
+      form.append('a1_key', this.a1.key);
       form.append('a1_model', this.a1.model);
+      form.append('a1_base_url', this.a1.base_url);
+      form.append('a2_key', this.a2.key);
       form.append('a2_model', this.a2.model);
+      form.append('a2_base_url', this.a2.base_url);
       if (this.pilotReportFile) form.append('pilot_report', this.pilotReportFile);
       if (this.labNotesFile) form.append('lab_notes', this.labNotesFile);
 
@@ -615,7 +606,6 @@ createApp({
     },
   },
   async mounted() {
-    await this.loadAgentStatus();
     await Promise.all([this.refreshModels('a1'), this.refreshModels('a2')]);
     if (this.a2.model === this.a1.model && this.a2.models.length > 1) this.a2.model = this.a2.models[1];
     this.loadDashboard();
