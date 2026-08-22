@@ -155,7 +155,11 @@ def call_agent(config: AgentConfig, system: str, user_content: str) -> str:
             {"role": "user", "content": user_content},
         ],
         "temperature": 0,
-        "max_tokens": 2000,
+        "max_tokens": 4000,
+        # Ask the provider to constrain output to valid JSON where supported
+        # (OpenRouter/Groq/most OpenAI-compatible APIs honor this; providers
+        # that don't recognize it simply ignore the field).
+        "response_format": {"type": "json_object"},
     }
     resp = requests.post(config.base_url, headers=headers, json=payload, timeout=90)
     if not resp.ok:
@@ -163,11 +167,25 @@ def call_agent(config: AgentConfig, system: str, user_content: str) -> str:
 
     data = resp.json()
     try:
-        text = data["choices"][0]["message"]["content"]
+        choice = data["choices"][0]
+        text = choice["message"]["content"]
     except (KeyError, IndexError) as e:
         raise AgentError(f"Unexpected API response shape: {e}")
 
+    if choice.get("finish_reason") == "length":
+        raise AgentError(
+            "Model output was truncated before completing the JSON (hit the token limit). "
+            "Try a smaller/simpler input, or a model with a larger max output."
+        )
+
     return _strip_json_fences(text)
+
+
+def _repair_json(text: str) -> str:
+    """Fix the handful of formatting slips LLMs commonly make in otherwise-
+    valid JSON: trailing commas before a closing bracket/brace."""
+    import re
+    return re.sub(r",\s*([\]}])", r"\1", text)
 
 
 # ──────────────────────────────────────────────
@@ -241,19 +259,24 @@ def build_agent1_input(client_text: str, pilot_report_text: str = "", lab_notes_
 # Agent runners
 # ──────────────────────────────────────────────
 
+def _parse_json_output(raw: str, label: str) -> dict:
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        pass
+    try:
+        return json.loads(_repair_json(raw))
+    except json.JSONDecodeError as e:
+        raise AgentError(f"{label} returned non-parseable output: {e}\nRaw:\n{raw}")
+
+
 def run_pm_agent(config: AgentConfig, client_text: str, pilot_report_text: str = "", lab_notes_text: str = "") -> PMOutput:
     user_content = build_agent1_input(client_text, pilot_report_text, lab_notes_text)
     raw = call_agent(config, PM_SYSTEM, user_content)
-    try:
-        return PMOutput.model_validate(json.loads(raw))
-    except (json.JSONDecodeError, Exception) as e:
-        raise AgentError(f"Agent 1 returned non-parseable output: {e}\nRaw: {raw[:500]}")
+    return PMOutput.model_validate(_parse_json_output(raw, "Agent 1"))
 
 
 def run_sa_agent(config: AgentConfig, pm: PMOutput) -> SAOutput:
     user_content = f"Process Knowledge Package from PM Agent:\n{pm.model_dump_json(indent=2)}"
     raw = call_agent(config, SA_SYSTEM, user_content)
-    try:
-        return SAOutput.model_validate(json.loads(raw))
-    except (json.JSONDecodeError, Exception) as e:
-        raise AgentError(f"Agent 2 returned non-parseable output: {e}\nRaw: {raw[:500]}")
+    return SAOutput.model_validate(_parse_json_output(raw, "Agent 2"))
